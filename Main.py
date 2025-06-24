@@ -1,4 +1,32 @@
-#!/usr/bin/env python3
+def validate_data(self):
+    """Validate all entered data"""
+    data = {field: var.get() for field, var in self.entry_vars.items()}
+    errors = self.validator.validate_all_fields(data)
+
+    if errors:
+        error_msg = "Validation errors found:\n\n"
+        for field, error in errors.items():
+            error_msg += f"• {error}\n"
+        messagebox.showerror("Validation Errors", error_msg)
+    else:
+        messagebox.showinfo("Validation Success", "All data is valid!")
+
+
+def load_defaults(self):
+    """Load default values for common fields"""
+    for field, default_value in DEFAULT_VALUES.items():
+        if field in self.entry_vars and not self.entry_vars[field].get():
+            self.entry_vars[field].set(default_value)
+    self.status_var.set("Default values loaded")
+
+
+def update_fields(self, extracted_data):
+    """Update UI fields with extracted data"""
+    for field, value in extracted_data.items():
+        if field in self.entry_vars and value:
+            self.entry_vars[field].set(value)  # !/usr/bin/env python3
+
+
 """
 MLS PDF Data Extractor
 A desktop application for extracting real estate data from MLS PDF files
@@ -7,29 +35,31 @@ A desktop application for extracting real estate data from MLS PDF files
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 import os
-import re
 import json
 from datetime import datetime
 import threading
+import logging
 
-try:
-    import pdfplumber
+# Import our custom modules
+from config import APP_NAME, APP_VERSION, WINDOW_SIZE, EXPORTS_DIR, DEFAULT_VALUES
+from patterns import extract_data_with_patterns
+from utils.pdf_processor import PDFProcessor
+from utils.data_validator import DataValidator
 
-    PDF_LIBRARY = "pdfplumber"
-except ImportError:
-    try:
-        import PyPDF2
-
-        PDF_LIBRARY = "PyPDF2"
-    except ImportError:
-        PDF_LIBRARY = None
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class MLSDataExtractor:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("MLS PDF Data Extractor")
-        self.root.geometry("800x900")
+        self.root.title(f"{APP_NAME} v{APP_VERSION}")
+        self.root.geometry(WINDOW_SIZE)
+
+        # Initialize processors
+        self.pdf_processor = PDFProcessor()
+        self.validator = DataValidator()
 
         # Data structure for extracted information
         self.extracted_data = {
@@ -60,7 +90,7 @@ class MLSDataExtractor:
         main_frame.columnconfigure(1, weight=1)
 
         # Title
-        title_label = ttk.Label(main_frame, text="MLS PDF Data Extractor",
+        title_label = ttk.Label(main_frame, text=f"{APP_NAME} v{APP_VERSION}",
                                 font=('Arial', 16, 'bold'))
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
 
@@ -124,12 +154,18 @@ class MLSDataExtractor:
         buttons_frame = ttk.Frame(main_frame)
         buttons_frame.grid(row=6, column=0, columnspan=3, pady=20)
 
-        # Save and Clear buttons
+        # Save, Clear, and Validate buttons
         save_btn = ttk.Button(buttons_frame, text="Save to JSON", command=self.save_data)
         save_btn.grid(row=0, column=0, padx=5)
 
+        validate_btn = ttk.Button(buttons_frame, text="Validate Data", command=self.validate_data)
+        validate_btn.grid(row=0, column=1, padx=5)
+
         clear_btn = ttk.Button(buttons_frame, text="Clear All", command=self.clear_data)
-        clear_btn.grid(row=0, column=1, padx=5)
+        clear_btn.grid(row=0, column=2, padx=5)
+
+        defaults_btn = ttk.Button(buttons_frame, text="Load Defaults", command=self.load_defaults)
+        defaults_btn.grid(row=0, column=3, padx=5)
 
         # PDF content preview
         preview_frame = ttk.LabelFrame(main_frame, text="PDF Content Preview", padding="10")
@@ -159,37 +195,41 @@ class MLSDataExtractor:
         thread.start()
 
     def extract_data(self):
-        if not PDF_LIBRARY:
+        if not self.pdf_processor.supported_library:
             messagebox.showerror("Error",
                                  "PDF processing library not found. Please install pdfplumber or PyPDF2:\npip install pdfplumber")
             return
 
         file_path = self.file_path_var.get()
-        if not file_path or not os.path.exists(file_path):
-            messagebox.showerror("Error", "Please select a valid PDF file")
+        if not file_path:
+            messagebox.showerror("Error", "Please select a PDF file")
             return
 
         try:
             self.progress.start()
             self.status_var.set("Extracting data from PDF...")
 
-            # Extract text from PDF
-            text_content = self.extract_pdf_text(file_path)
+            # Extract text from PDF using our processor
+            text_content = self.pdf_processor.extract_text(file_path)
 
             # Update preview
+            preview_text = text_content[:2000] + "..." if len(text_content) > 2000 else text_content
             self.root.after(0, lambda: self.content_text.delete(1.0, tk.END))
-            self.root.after(0, lambda: self.content_text.insert(1.0, text_content[:2000] + "..." if len(
-                text_content) > 2000 else text_content))
+            self.root.after(0, lambda: self.content_text.insert(1.0, preview_text))
 
-            # Extract data using patterns
-            extracted = self.parse_mls_data(text_content)
+            # Extract data using our patterns
+            extracted = extract_data_with_patterns(text_content)
 
             # Update UI with extracted data
             self.root.after(0, lambda: self.update_fields(extracted))
             self.root.after(0, lambda: self.status_var.set("Data extraction completed"))
 
+            logger.info(f"Successfully extracted data from {file_path}")
+
         except Exception as e:
-            self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to extract data: {str(e)}"))
+            error_msg = f"Failed to extract data: {str(e)}"
+            logger.error(error_msg)
+            self.root.after(0, lambda: messagebox.showerror("Error", error_msg))
             self.root.after(0, lambda: self.status_var.set("Extraction failed"))
         finally:
             self.root.after(0, lambda: self.progress.stop())
@@ -291,24 +331,30 @@ class MLSDataExtractor:
 
         return extracted
 
-    def update_fields(self, extracted_data):
-        """Update UI fields with extracted data"""
-        for field, value in extracted_data.items():
-            if field in self.entry_vars and value:
-                self.entry_vars[field].set(value)
-
     def save_data(self):
         """Save extracted data to JSON file"""
-        data = {}
-        for field, var in self.entry_vars.items():
-            data[field] = var.get()
+        # Validate data first
+        data = {field: var.get() for field, var in self.entry_vars.items()}
+        errors = self.validator.validate_all_fields(data)
+
+        if errors:
+            if not messagebox.askyesno("Validation Errors",
+                                       "There are validation errors. Save anyway?"):
+                return
 
         # Add metadata
         data['extraction_date'] = datetime.now().isoformat()
         data['source_file'] = self.file_path_var.get()
+        data['app_version'] = APP_VERSION
+
+        # Default filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"mls_data_{timestamp}.json"
 
         filename = filedialog.asksaveasfilename(
             title="Save Extracted Data",
+            initialdir=EXPORTS_DIR,
+            initialfile=default_filename,
             defaultextension=".json",
             filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
         )
@@ -318,8 +364,11 @@ class MLSDataExtractor:
                 with open(filename, 'w') as f:
                     json.dump(data, f, indent=2)
                 messagebox.showinfo("Success", f"Data saved to {filename}")
+                logger.info(f"Data saved to {filename}")
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to save data: {str(e)}")
+                error_msg = f"Failed to save data: {str(e)}"
+                messagebox.showerror("Error", error_msg)
+                logger.error(error_msg)
 
     def clear_data(self):
         """Clear all fields"""
@@ -330,13 +379,14 @@ class MLSDataExtractor:
 
     def run(self):
         """Start the application"""
-        if not PDF_LIBRARY:
+        if not self.pdf_processor.supported_library:
             messagebox.showwarning(
                 "Missing Dependencies",
                 "PDF processing library not found.\n\nPlease install required packages:\n"
                 "pip install pdfplumber\n\nThe application will still run but PDF extraction will not work."
             )
 
+        logger.info(f"Starting {APP_NAME} v{APP_VERSION}")
         self.root.mainloop()
 
 
