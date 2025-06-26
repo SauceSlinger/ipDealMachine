@@ -1,32 +1,4 @@
-def validate_data(self):
-    """Validate all entered data"""
-    data = {field: var.get() for field, var in self.entry_vars.items()}
-    errors = self.validator.validate_all_fields(data)
-
-    if errors:
-        error_msg = "Validation errors found:\n\n"
-        for field, error in errors.items():
-            error_msg += f"• {error}\n"
-        messagebox.showerror("Validation Errors", error_msg)
-    else:
-        messagebox.showinfo("Validation Success", "All data is valid!")
-
-
-def load_defaults(self):
-    """Load default values for common fields"""
-    for field, default_value in DEFAULT_VALUES.items():
-        if field in self.entry_vars and not self.entry_vars[field].get():
-            self.entry_vars[field].set(default_value)
-    self.status_var.set("Default values loaded")
-
-
-def update_fields(self, extracted_data):
-    """Update UI fields with extracted data"""
-    for field, value in extracted_data.items():
-        if field in self.entry_vars and value:
-            self.entry_vars[field].set(value)  # !/usr/bin/env python3
-
-
+#!/usr/bin/env python3
 """
 MLS PDF Data Extractor
 A desktop application for extracting real estate data from MLS PDF files
@@ -39,6 +11,7 @@ import json
 from datetime import datetime
 import threading
 import logging
+import re  # Import the regex module
 
 # Import our custom modules
 from config import APP_NAME, APP_VERSION, WINDOW_SIZE, EXPORTS_DIR, DEFAULT_VALUES
@@ -57,6 +30,26 @@ class MLSDataExtractor:
         self.root.title(f"{APP_NAME} v{APP_VERSION}")
         self.root.geometry(WINDOW_SIZE)
 
+        # Apply a theme for a modern look
+        self.style = ttk.Style()
+        self.style.theme_use('clam')  # You can try 'clam', 'alt', 'default', 'classic'
+
+        # Configure styles for various widgets
+        self.style.configure('TFrame', background='#f0f0f0')
+        self.style.configure('TLabel', background='#f0f0f0', font=('Arial', 10))
+        self.style.configure('TButton', font=('Arial', 10, 'bold'), padding=6)
+        self.style.map('TButton',
+                       background=[('active', '#e0e0e0')],
+                       foreground=[('active', 'black')])
+        self.style.configure('Accent.TButton', background='#4CAF50', foreground='white')
+        self.style.map('Accent.TButton',
+                       background=[('active', '#45a049')],
+                       foreground=[('active', 'white')])
+        self.style.configure('TEntry', fieldbackground='white')
+        self.style.configure('TLabelframe', background='#f0f0f0')
+        self.style.configure('TLabelframe.Label', background='#f0f0f0', font=('Arial', 12, 'bold'))
+        self.style.configure('TProgressbar', thickness=10)
+
         # Initialize processors
         self.pdf_processor = PDFProcessor()
         self.validator = DataValidator()
@@ -74,14 +67,15 @@ class MLSDataExtractor:
             'purchase_price': '',
             'down_payment': '',
             'interest_rate': '',
-            'loan_terms_years': ''
+            'loan_terms_years': '',
+            'gross_scheduled_income': ''  # New field added here
         }
 
         self.setup_ui()
 
     def setup_ui(self):
         # Main frame
-        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame = ttk.Frame(self.root, padding="15")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # Configure grid weights
@@ -91,8 +85,8 @@ class MLSDataExtractor:
 
         # Title
         title_label = ttk.Label(main_frame, text=f"{APP_NAME} v{APP_VERSION}",
-                                font=('Arial', 16, 'bold'))
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+                                font=('Arial', 18, 'bold'), anchor='center')
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 25), sticky=tk.E + tk.W)
 
         # File selection
         ttk.Label(main_frame, text="PDF File:").grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -114,11 +108,11 @@ class MLSDataExtractor:
 
         # Status label
         self.status_var = tk.StringVar(value="Ready")
-        status_label = ttk.Label(main_frame, textvariable=self.status_var)
+        status_label = ttk.Label(main_frame, textvariable=self.status_var, font=('Arial', 9, 'italic'))
         status_label.grid(row=4, column=0, columnspan=3, pady=5)
 
         # Data fields frame
-        fields_frame = ttk.LabelFrame(main_frame, text="Extracted Data", padding="10")
+        fields_frame = ttk.LabelFrame(main_frame, text="Extracted Data", padding="15")
         fields_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=20)
         fields_frame.columnconfigure(1, weight=1)
 
@@ -138,13 +132,14 @@ class MLSDataExtractor:
             ("Purchase Price ($)", "purchase_price"),
             ("Down Payment ($)", "down_payment"),
             ("Interest Rate (%)", "interest_rate"),
-            ("Loan Terms (Years)", "loan_terms_years")
+            ("Loan Terms (Years)", "loan_terms_years"),
+            ("Gross Scheduled Income ($)", "gross_scheduled_income")  # New label and key for UI
         ]
 
         for i, (label, key) in enumerate(fields):
             ttk.Label(fields_frame, text=label + ":").grid(row=i, column=0, sticky=tk.W, pady=2)
             var = tk.StringVar()
-            entry = ttk.Entry(fields_frame, textvariable=var, width=30)
+            entry = ttk.Entry(fields_frame, textvariable=var, width=40)  # Increased width
             entry.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=2, padx=(10, 0))
 
             self.entry_vars[key] = var
@@ -168,12 +163,13 @@ class MLSDataExtractor:
         defaults_btn.grid(row=0, column=3, padx=5)
 
         # PDF content preview
-        preview_frame = ttk.LabelFrame(main_frame, text="PDF Content Preview", padding="10")
+        preview_frame = ttk.LabelFrame(main_frame, text="PDF Content Preview", padding="15")
         preview_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(20, 0))
         preview_frame.columnconfigure(0, weight=1)
         preview_frame.rowconfigure(0, weight=1)
 
-        self.content_text = scrolledtext.ScrolledText(preview_frame, height=10, width=70)
+        self.content_text = scrolledtext.ScrolledText(preview_frame, height=10, width=70,
+                                                      wrap=tk.WORD)  # Added word wrap
         self.content_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # Configure grid weights for resizing
@@ -187,6 +183,7 @@ class MLSDataExtractor:
         )
         if filename:
             self.file_path_var.set(filename)
+            self.status_var.set(f"Selected: {os.path.basename(filename)}")
 
     def extract_data_threaded(self):
         # Run extraction in a separate thread to prevent UI freezing
@@ -196,24 +193,24 @@ class MLSDataExtractor:
 
     def extract_data(self):
         if not self.pdf_processor.supported_library:
-            messagebox.showerror("Error",
-                                 "PDF processing library not found. Please install pdfplumber or PyPDF2:\npip install pdfplumber")
+            self.root.after(0, lambda: messagebox.showerror("Error",
+                                                            "PDF processing library not found. Please install pdfplumber or PyPDF2:\npip install pdfplumber"))
             return
 
         file_path = self.file_path_var.get()
         if not file_path:
-            messagebox.showerror("Error", "Please select a PDF file")
+            self.root.after(0, lambda: messagebox.showerror("Error", "Please select a PDF file"))
             return
 
         try:
-            self.progress.start()
-            self.status_var.set("Extracting data from PDF...")
+            self.root.after(0, lambda: self.progress.start())
+            self.root.after(0, lambda: self.status_var.set("Extracting data from PDF..."))
 
             # Extract text from PDF using our processor
             text_content = self.pdf_processor.extract_text(file_path)
 
             # Update preview
-            preview_text = text_content[:2000] + "..." if len(text_content) > 2000 else text_content
+            preview_text = text_content[:2000] + "\n..." if len(text_content) > 2000 else text_content
             self.root.after(0, lambda: self.content_text.delete(1.0, tk.END))
             self.root.after(0, lambda: self.content_text.insert(1.0, preview_text))
 
@@ -234,102 +231,31 @@ class MLSDataExtractor:
         finally:
             self.root.after(0, lambda: self.progress.stop())
 
-    def extract_pdf_text(self, file_path):
-        text = ""
+    def validate_data(self):
+        """Validate all entered data"""
+        data = {field: var.get() for field, var in self.entry_vars.items()}
+        errors = self.validator.validate_all_fields(data)
 
-        if PDF_LIBRARY == "pdfplumber":
-            with pdfplumber.open(file_path) as pdf:
-                for page in pdf.pages:
-                    page_text = page.extract_text()
-                    if page_text:
-                        text += page_text + "\n"
+        if errors:
+            error_msg = "Validation errors found:\n\n"
+            for field, error in errors.items():
+                error_msg += f"• {error}\n"
+            messagebox.showerror("Validation Errors", error_msg)
+        else:
+            messagebox.showinfo("Validation Success", "All data is valid!")
 
-        elif PDF_LIBRARY == "PyPDF2":
-            with open(file_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
+    def load_defaults(self):
+        """Load default values for common fields"""
+        for field, default_value in DEFAULT_VALUES.items():
+            if field in self.entry_vars and not self.entry_vars[field].get():
+                self.entry_vars[field].set(default_value)
+        self.status_var.set("Default values loaded")
 
-        return text
-
-    def parse_mls_data(self, text):
-        """Parse MLS data using regex patterns"""
-        extracted = {}
-
-        # Define regex patterns for common MLS fields
-        patterns = {
-            'number_of_units': [
-                r'units?\s*[:=]\s*(\d+)',
-                r'(\d+)\s*units?',
-                r'unit\s*count\s*[:=]\s*(\d+)',
-                r'total\s*units?\s*[:=]\s*(\d+)'
-            ],
-            'monthly_rent_per_unit': [
-                r'rent\s*per\s*unit\s*[:=]\s*\$?([\d,]+)',
-                r'monthly\s*rent\s*[:=]\s*\$?([\d,]+)',
-                r'rental\s*income\s*[:=]\s*\$?([\d,]+)',
-                r'\$?([\d,]+)\s*per\s*month'
-            ],
-            'vacancy_rate': [
-                r'vacancy\s*rate?\s*[:=]\s*(\d+(?:\.\d+)?)\s*%?',
-                r'vacant\s*[:=]\s*(\d+(?:\.\d+)?)\s*%?'
-            ],
-            'property_taxes': [
-                r'property\s*tax(?:es)?\s*[:=]\s*\$?([\d,]+)',
-                r'taxes?\s*[:=]\s*\$?([\d,]+)',
-                r'annual\s*tax(?:es)?\s*[:=]\s*\$?([\d,]+)'
-            ],
-            'insurance': [
-                r'insurance\s*[:=]\s*\$?([\d,]+)',
-                r'property\s*insurance\s*[:=]\s*\$?([\d,]+)'
-            ],
-            'property_management_fees': [
-                r'management\s*fee?s?\s*[:=]\s*\$?([\d,]+)',
-                r'property\s*management\s*[:=]\s*\$?([\d,]+)',
-                r'mgmt\s*fee?s?\s*[:=]\s*\$?([\d,]+)'
-            ],
-            'maintenance_repairs': [
-                r'maintenance\s*(?:and\s*)?repairs?\s*[:=]\s*\$?([\d,]+)',
-                r'repair\s*(?:and\s*)?maintenance\s*[:=]\s*\$?([\d,]+)',
-                r'maint\s*[:=]\s*\$?([\d,]+)'
-            ],
-            'utilities': [
-                r'utilities\s*[:=]\s*\$?([\d,]+)',
-                r'utility\s*costs?\s*[:=]\s*\$?([\d,]+)'
-            ],
-            'purchase_price': [
-                r'purchase\s*price\s*[:=]\s*\$?([\d,]+)',
-                r'asking\s*price\s*[:=]\s*\$?([\d,]+)',
-                r'list\s*price\s*[:=]\s*\$?([\d,]+)',
-                r'price\s*[:=]\s*\$?([\d,]+)'
-            ],
-            'down_payment': [
-                r'down\s*payment\s*[:=]\s*\$?([\d,]+)',
-                r'down\s*[:=]\s*\$?([\d,]+)'
-            ],
-            'interest_rate': [
-                r'interest\s*rate\s*[:=]\s*(\d+(?:\.\d+)?)\s*%?',
-                r'rate\s*[:=]\s*(\d+(?:\.\d+)?)\s*%?'
-            ],
-            'loan_terms_years': [
-                r'loan\s*term\s*[:=]\s*(\d+)\s*years?',
-                r'term\s*[:=]\s*(\d+)\s*years?',
-                r'(\d+)\s*year\s*loan'
-            ]
-        }
-
-        # Clean text for better matching
-        text_clean = re.sub(r'\s+', ' ', text.lower())
-
-        for field, field_patterns in patterns.items():
-            for pattern in field_patterns:
-                match = re.search(pattern, text_clean, re.IGNORECASE)
-                if match:
-                    value = match.group(1).replace(',', '')
-                    extracted[field] = value
-                    break  # Use first match found
-
-        return extracted
+    def update_fields(self, extracted_data):
+        """Update UI fields with extracted data"""
+        for field, value in extracted_data.items():
+            if field in self.entry_vars and value is not None:  # Check for None explicitly
+                self.entry_vars[field].set(value)
 
     def save_data(self):
         """Save extracted data to JSON file"""
@@ -361,6 +287,8 @@ class MLSDataExtractor:
 
         if filename:
             try:
+                # Ensure the export directory exists
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
                 with open(filename, 'w') as f:
                     json.dump(data, f, indent=2)
                 messagebox.showinfo("Success", f"Data saved to {filename}")
@@ -375,6 +303,7 @@ class MLSDataExtractor:
         for var in self.entry_vars.values():
             var.set("")
         self.content_text.delete(1.0, tk.END)
+        self.file_path_var.set("")  # Clear file path as well
         self.status_var.set("Ready")
 
     def run(self):
