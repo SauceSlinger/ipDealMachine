@@ -16,7 +16,9 @@ import re  # Import the regex module
 # Import our custom modules
 from config import (
     APP_NAME, APP_VERSION, WINDOW_SIZE, EXPORTS_DIR, DEFAULT_VALUES,
-    GUI_FIELD_ORDER, NUMERIC_FIELDS, PERCENTAGE_FIELDS, INTEGER_FIELDS  # <-- ADDED THESE IMPORTS
+    GUI_FIELD_ORDER, NUMERIC_FIELDS, PERCENTAGE_FIELDS, INTEGER_FIELDS,
+    # --- IMPORT COLOR CONSTANTS ---
+    C21_GOLD, C21_BLACK, C21_DARK_GRAY, C21_WHITE, C21_LIGHT_GRAY
 )
 from patterns import extract_data_with_patterns
 from utils.pdf_processor import PDFProcessor
@@ -31,34 +33,76 @@ class MLSDataExtractor:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title(f"{APP_NAME} v{APP_VERSION}")
-        self.root.geometry(WINDOW_SIZE)
+        self.root.geometry(WINDOW_SIZE)  # Use WINDOW_SIZE from config
+
+        # Define Century 21 inspired color palette - NOW IMPORTED FROM CONFIG
+        # self.C21_GOLD = '#DAA520' # No longer needed here
+        # etc.
 
         # Apply a theme for a modern look
         self.style = ttk.Style()
-        self.style.theme_use('clam')  # You can try 'clam', 'alt', 'default', 'classic'
+        self.style.theme_use('clam')
 
-        # Configure styles for various widgets
-        self.style.configure('TFrame', background='#f0f0f0')
-        self.style.configure('TLabel', background='#f0f0f0', font=('Arial', 10))
-        self.style.configure('TButton', font=('Arial', 10, 'bold'), padding=6)
+        # Configure styles for various widgets with Century 21 colors
+        self.style.configure('TFrame', background=C21_LIGHT_GRAY)
+        self.style.configure('TLabel', background=C21_LIGHT_GRAY, foreground=C21_DARK_GRAY, font=('Arial', 10))
+
+        # Standard Buttons (Save, Validate, Clear, Load Defaults)
+        self.style.configure('TButton',
+                             font=('Arial', 10, 'bold'),
+                             padding=8,
+                             relief='flat',
+                             background=C21_DARK_GRAY,
+                             foreground=C21_WHITE,
+                             borderwidth=1,
+                             focusthickness=0)
         self.style.map('TButton',
-                       background=[('active', '#e0e0e0')],
-                       foreground=[('active', 'black')])
-        self.style.configure('Accent.TButton', background='#4CAF50', foreground='white')
+                       background=[('active', '#555555'), ('pressed', '#111111')],
+                       foreground=[('active', C21_WHITE)])
+
+        # Accent Buttons (Extract Data, Calculate Financials)
+        self.style.configure('Accent.TButton',
+                             background=C21_GOLD,
+                             foreground=C21_BLACK,
+                             relief='flat',
+                             font=('Arial', 10, 'bold'),
+                             padding=8,
+                             borderwidth=1,
+                             focusthickness=0)
         self.style.map('Accent.TButton',
-                       background=[('active', '#45a049')],
-                       foreground=[('active', 'white')])
-        self.style.configure('TEntry', fieldbackground='white')
-        self.style.configure('TLabelframe', background='#f0f0f0')
-        self.style.configure('TLabelframe.Label', background='#f0f0f0', font=('Arial', 12, 'bold'))
-        self.style.configure('TProgressbar', thickness=10)
+                       background=[('active', '#C09010'), ('pressed', '#A07000')],
+                       foreground=[('active', C21_BLACK)])
+
+        # Entry Fields
+        self.style.configure('TEntry',
+                             fieldbackground=C21_WHITE,
+                             foreground=C21_BLACK,
+                             relief='solid',
+                             borderwidth=1,
+                             padding=3)
+
+        # Label Frames
+        self.style.configure('TLabelframe',
+                             background=C21_LIGHT_GRAY,
+                             relief='solid',
+                             borderwidth=1,
+                             padding=15)
+        self.style.configure('TLabelframe.Label',
+                             background=C21_LIGHT_GRAY,
+                             foreground=C21_GOLD,
+                             font=('Arial', 13, 'bold'))
+
+        # Progress Bar
+        self.style.configure('TProgressbar',
+                             thickness=10,
+                             background=C21_GOLD,
+                             troughcolor=C21_LIGHT_GRAY)
 
         # Initialize processors
         self.pdf_processor = PDFProcessor()
         self.validator = DataValidator()
 
         # Data structure for extracted information (input fields)
-        # This will be populated from GUI_FIELD_ORDER dynamically
         self.extracted_data = {key: '' for label, key in GUI_FIELD_ORDER}
 
         # Data structure for calculated outputs
@@ -76,7 +120,6 @@ class MLSDataExtractor:
         }
 
         self.setup_ui()
-        # Automatically load defaults and calculate on application start
         self.root.after(100, self.load_defaults_and_calculate)
 
     def load_defaults_and_calculate(self):
@@ -85,69 +128,89 @@ class MLSDataExtractor:
         self.calculate_projections()
 
     def setup_ui(self):
-        # Main frame
-        main_frame = ttk.Frame(self.root, padding="15")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-
-        # Configure grid weights
+        # Main container frame for overall padding
+        main_container = ttk.Frame(self.root, padding="20", style='TFrame')
+        main_container.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
 
-        # Title
-        title_label = ttk.Label(main_frame, text=f"{APP_NAME} v{APP_VERSION}",
-                                font=('Arial', 18, 'bold'), anchor='center')
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 25), sticky=tk.E + tk.W)
+        # Title at the top, spanning both columns
+        title_label = ttk.Label(main_container, text=f"{APP_NAME} v{APP_VERSION}",
+                                font=('Arial', 20, 'bold'), anchor='center',
+                                background=C21_GOLD, foreground=C21_BLACK,
+                                relief='flat', padding=15)
+        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 25), sticky=tk.E + tk.W)
+
+        # Create two main columns within the main_container
+        left_panel = ttk.Frame(main_container, padding="15", style='TFrame')
+        left_panel.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 15))
+        left_panel.columnconfigure(1, weight=1)
+        main_container.columnconfigure(0, weight=1)
+
+        right_panel = ttk.Frame(main_container, padding="15", style='TFrame')
+        right_panel.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(15, 0))
+        right_panel.columnconfigure(1, weight=1)
+        main_container.columnconfigure(1, weight=1)
+
+        # --- Left Panel Content ---
+        current_row = 0
 
         # File selection
-        ttk.Label(main_frame, text="PDF File:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(left_panel, text="PDF File:", font=('Arial', 10, 'bold'), foreground=C21_DARK_GRAY).grid(
+            row=current_row, column=0, sticky=tk.W, pady=5)
         self.file_path_var = tk.StringVar()
-        self.file_entry = ttk.Entry(main_frame, textvariable=self.file_path_var, width=50)
-        self.file_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5, padx=(5, 5))
+        self.file_entry = ttk.Entry(left_panel, textvariable=self.file_path_var, width=50)
+        self.file_entry.grid(row=current_row, column=1, sticky=(tk.W, tk.E), pady=5, padx=(5, 5))
 
-        browse_btn = ttk.Button(main_frame, text="Browse", command=self.browse_file)
-        browse_btn.grid(row=1, column=2, pady=5)
+        browse_btn = ttk.Button(left_panel, text="Browse", command=self.browse_file)
+        browse_btn.grid(row=current_row, column=2, pady=5)
+        current_row += 1
 
         # Extract button
-        extract_btn = ttk.Button(main_frame, text="Extract Data",
+        extract_btn = ttk.Button(left_panel, text="Extract Data",
                                  command=self.extract_data_threaded, style='Accent.TButton')
-        extract_btn.grid(row=2, column=0, columnspan=3, pady=20)
+        extract_btn.grid(row=current_row, column=0, columnspan=3, pady=15, sticky=tk.E + tk.W)
+        current_row += 1
 
         # Progress bar
-        self.progress = ttk.Progressbar(main_frame, mode='indeterminate')
-        self.progress.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
+        self.progress = ttk.Progressbar(left_panel, mode='indeterminate')
+        self.progress.grid(row=current_row, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
+        current_row += 1
 
         # Status label
         self.status_var = tk.StringVar(value="Ready")
-        status_label = ttk.Label(main_frame, textvariable=self.status_var, font=('Arial', 9, 'italic'))
-        status_label.grid(row=4, column=0, columnspan=3, pady=5)
+        status_label = ttk.Label(left_panel, textvariable=self.status_var, font=('Arial', 9, 'italic'),
+                                 foreground=C21_DARK_GRAY)
+        status_label.grid(row=current_row, column=0, columnspan=3, pady=5)
+        current_row += 1
 
-        # Data fields frame (Inputs)
-        fields_frame = ttk.LabelFrame(main_frame, text="Input Data", padding="15")
-        fields_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=20)
+        # Input Data fields frame
+        fields_frame = ttk.LabelFrame(left_panel, text="Input Data", padding="15")
+        fields_frame.grid(row=current_row, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 20))
         fields_frame.columnconfigure(1, weight=1)
+        left_panel.rowconfigure(current_row, weight=1)
 
         # Create entry fields for each data point using GUI_FIELD_ORDER
         self.entry_vars = {}
         self.entries = {}
 
         for i, (label, key) in enumerate(GUI_FIELD_ORDER):
-            ttk.Label(fields_frame, text=label + ":").grid(row=i, column=0, sticky=tk.W, pady=2)
+            ttk.Label(fields_frame, text=label + ":", foreground=C21_DARK_GRAY).grid(row=i, column=0, sticky=tk.W,
+                                                                                     pady=3)
             var = tk.StringVar()
             entry = ttk.Entry(fields_frame, textvariable=var, width=40)
-            entry.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=2, padx=(10, 0))
+            entry.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=3, padx=(10, 0))
 
             self.entry_vars[key] = var
             self.entries[key] = entry
 
-            # Add trace to update calculations when input fields change
             var.trace_add("write", lambda name, index, mode, var=var: self.calculate_projections())
+        current_row += 1
 
-        # Buttons frame
-        buttons_frame = ttk.Frame(main_frame)
-        buttons_frame.grid(row=6, column=0, columnspan=3, pady=20)
+        # Buttons frame (for Save, Clear, Validate, Load Defaults, Calculate)
+        buttons_frame = ttk.Frame(left_panel, style='TFrame')
+        buttons_frame.grid(row=current_row, column=0, columnspan=3, pady=15)
 
-        # Save, Clear, Validate, and Load Defaults buttons
         save_btn = ttk.Button(buttons_frame, text="Save to JSON", command=self.save_data)
         save_btn.grid(row=0, column=0, padx=5)
 
@@ -164,10 +227,14 @@ class MLSDataExtractor:
                                    style='Accent.TButton')
         calculate_btn.grid(row=0, column=4, padx=5)
 
+        # --- Right Panel Content ---
+        right_panel_row = 0
+
         # Financial Projections Output Pane
-        output_frame = ttk.LabelFrame(main_frame, text="Financial Projections", padding="15")
-        output_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=20)
-        output_frame.columnconfigure(1, weight=1)  # Allow output values to expand
+        output_frame = ttk.LabelFrame(right_panel, text="Financial Projections", padding="15")
+        output_frame.grid(row=right_panel_row, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 20))
+        output_frame.columnconfigure(1, weight=1)
+        right_panel.rowconfigure(right_panel_row, weight=1)
 
         output_fields = [
             ("Gross Potential Income (GPI)", "gpi"),
@@ -183,26 +250,30 @@ class MLSDataExtractor:
         ]
 
         for i, (label, key) in enumerate(output_fields):
-            ttk.Label(output_frame, text=label + ":", font=('Arial', 10, 'bold')).grid(row=i, column=0, sticky=tk.W,
-                                                                                       pady=2)
-            ttk.Label(output_frame, textvariable=self.calculated_outputs[key], font=('Arial', 10)).grid(row=i, column=1,
-                                                                                                        sticky=tk.W,
-                                                                                                        pady=2,
-                                                                                                        padx=(10, 0))
+            ttk.Label(output_frame, text=label + ":", font=('Arial', 10, 'bold'), foreground=C21_DARK_GRAY).grid(row=i,
+                                                                                                                 column=0,
+                                                                                                                 sticky=tk.W,
+                                                                                                                 pady=3)
+            ttk.Label(output_frame, textvariable=self.calculated_outputs[key], font=('Arial', 10, 'bold'),
+                      foreground=C21_BLACK).grid(row=i, column=1, sticky=tk.W, pady=3, padx=(10, 0))
+        right_panel_row += 1
 
         # PDF content preview
-        preview_frame = ttk.LabelFrame(main_frame, text="PDF Content Preview", padding="15")
-        preview_frame.grid(row=8, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(20, 0))
+        preview_frame = ttk.LabelFrame(right_panel, text="PDF Content Preview", padding="15")
+        preview_frame.grid(row=right_panel_row, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 0))
         preview_frame.columnconfigure(0, weight=1)
         preview_frame.rowconfigure(0, weight=1)
+        right_panel.rowconfigure(right_panel_row, weight=1)
 
-        self.content_text = scrolledtext.ScrolledText(preview_frame, height=10, width=70, wrap=tk.WORD)
+        self.content_text = scrolledtext.ScrolledText(preview_frame, height=10, width=70, wrap=tk.WORD,
+                                                      font=('Courier New', 9),
+                                                      background=C21_WHITE,
+                                                      foreground=C21_BLACK,
+                                                      relief='solid', borderwidth=1)
         self.content_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-        # Configure grid weights for resizing
-        main_frame.rowconfigure(5, weight=1)  # Input fields frame
-        main_frame.rowconfigure(7, weight=1)  # Output fields frame
-        main_frame.rowconfigure(8, weight=1)  # PDF preview frame
+        # Final main_container row configuration to allow content to expand
+        main_container.rowconfigure(1, weight=1)
 
     def browse_file(self):
         filename = filedialog.askopenfilename(
@@ -246,13 +317,11 @@ class MLSDataExtractor:
             extracted = extract_data_with_patterns(text_content)
 
             # Update UI with extracted data
-            # First, load defaults to fill in any missing non-extracted fields
             self.root.after(0, self.load_defaults)
-            # Then, update with extracted data which will overwrite defaults
             self.root.after(0, lambda: self.update_fields(extracted))
 
             self.root.after(0, lambda: self.status_var.set("Data extraction completed. Calculating financials..."))
-            self.root.after(0, self.calculate_projections)  # Calculate after extraction
+            self.root.after(0, self.calculate_projections)
 
             logger.info(f"Successfully extracted data from {file_path}")
 
@@ -276,19 +345,18 @@ class MLSDataExtractor:
             messagebox.showerror("Validation Errors", error_msg)
         else:
             messagebox.showinfo("Validation Success", "All data is valid!")
-            self.calculate_projections()  # Calculate after successful validation
+            self.calculate_projections()
 
     def load_defaults(self):
         """Load default values for common fields"""
-        for field_label, field_key in GUI_FIELD_ORDER:  # Iterate through the defined order
-            if field_key in self.entry_vars:  # Only set if the field exists in the GUI
+        for field_label, field_key in GUI_FIELD_ORDER:
+            if field_key in self.entry_vars:
                 current_value = self.entry_vars[field_key].get()
-                default_value = DEFAULT_VALUES.get(field_key, '')  # Get default, or empty string if not defined
-                # Only load default if the field is currently empty or 'N/A'
+                default_value = DEFAULT_VALUES.get(field_key, '')
                 if not current_value or current_value == "N/A":
                     self.entry_vars[field_key].set(default_value)
         self.status_var.set("Default values loaded. Calculating financials...")
-        self.calculate_projections()  # Calculate after loading defaults
+        self.calculate_projections()
 
     def update_fields(self, extracted_data):
         """Update UI fields with extracted data, overwriting existing values."""
@@ -298,7 +366,6 @@ class MLSDataExtractor:
 
     def calculate_projections(self):
         """Calculate and update financial projection outputs."""
-        # Get all current input values
         inputs = {}
         for key, var in self.entry_vars.items():
             value = var.get().strip().replace('$', '').replace(',', '')
@@ -306,26 +373,23 @@ class MLSDataExtractor:
                 inputs[key] = None
             else:
                 try:
-                    # Use a general numeric conversion for safety before specific type casting
                     numeric_value = float(value)
-                    if key in INTEGER_FIELDS:  # Use imported INTEGER_FIELDS
+                    if key in INTEGER_FIELDS:
                         inputs[key] = int(numeric_value)
-                    elif key in PERCENTAGE_FIELDS:  # Use imported PERCENTAGE_FIELDS
+                    elif key in PERCENTAGE_FIELDS:
                         inputs[key] = numeric_value
-                    elif key in NUMERIC_FIELDS:  # Use imported NUMERIC_FIELDS
+                    elif key in NUMERIC_FIELDS:
                         inputs[key] = numeric_value
-                    else:  # Fallback for any other unexpected field types
+                    else:
                         inputs[key] = numeric_value
                 except ValueError:
-                    inputs[key] = None  # Mark as invalid if conversion fails
+                    inputs[key] = None
 
-        # Reset all calculated outputs to N/A
         for key in self.calculated_outputs:
             self.calculated_outputs[key].set("N/A")
 
         try:
             # 1. Gross Potential Income (GPI)
-            # Prioritize Gross Scheduled Income if available, otherwise use units * monthly rent
             gross_scheduled_income = inputs.get('gross_scheduled_income')
             num_units = inputs.get('number_of_units')
             monthly_rent_per_unit = inputs.get('monthly_rent_per_unit')
@@ -338,7 +402,7 @@ class MLSDataExtractor:
             elif num_units is not None and monthly_rent_per_unit is not None:
                 gpi = num_units * monthly_rent_per_unit * 12
 
-            if gpi is None:  # Exit if GPI cannot be calculated
+            if gpi is None:
                 self.status_var.set(
                     "Cannot calculate GPI. Needs 'Number of Units' AND 'Monthly Rent per Unit' OR 'Gross Scheduled Income'.")
                 return
@@ -346,13 +410,11 @@ class MLSDataExtractor:
 
             # 2. Vacancy and Credit Loss (V&C)
             vacancy_rate = inputs.get('vacancy_rate')
-            # If vacancy rate is not extracted, use the default from config.py
             if vacancy_rate is None:
                 try:
                     vacancy_rate = float(DEFAULT_VALUES.get('vacancy_rate', '0'))
-                    # No need to update GUI here, load_defaults handles it on startup/extract
                 except ValueError:
-                    vacancy_rate = 0.0  # Fallback if default is also invalid
+                    vacancy_rate = 0.0
 
             vc = gpi * (vacancy_rate / 100)
             self.calculated_outputs['vc'].set(f"${vc:,.2f}")
@@ -362,7 +424,6 @@ class MLSDataExtractor:
             self.calculated_outputs['egi'].set(f"${egi:,.2f}")
 
             # 4. Net Operating Income (NOI)
-            # Fetch all expenses, ensuring they are numbers, defaulting to 0 if not present/invalid
             property_taxes = inputs.get('property_taxes') or float(DEFAULT_VALUES.get('property_taxes', '0') or '0')
             insurance = inputs.get('insurance') or float(DEFAULT_VALUES.get('insurance', '0') or '0')
             property_management_fees = inputs.get('property_management_fees') or float(
@@ -378,7 +439,7 @@ class MLSDataExtractor:
             self.calculated_outputs['noi'].set(f"${noi:,.2f}")
 
             # 5. Capitalization Rate (Cap Rate)
-            if purchase_price is None:  # purchase_price might not be extracted from PDF
+            if purchase_price is None:
                 purchase_price = float(DEFAULT_VALUES.get('purchase_price', '0') or '0')
 
             if purchase_price > 0:
@@ -486,10 +547,8 @@ class MLSDataExtractor:
 
     def save_data(self):
         """Save extracted and current input data to JSON file"""
-        # Get all current input data
         data_to_save = {field: var.get() for field, var in self.entry_vars.items()}
 
-        # Validate data first
         errors = self.validator.validate_all_fields(data_to_save)
 
         if errors:
@@ -497,16 +556,13 @@ class MLSDataExtractor:
                                        "There are validation errors. Save anyway?"):
                 return
 
-        # Add metadata
         data_to_save['extraction_date'] = datetime.now().isoformat()
         data_to_save['source_file'] = self.file_path_var.get()
         data_to_save['app_version'] = APP_VERSION
 
-        # Add calculated outputs to the saved data
         calculated_data = {key: var.get() for key, var in self.calculated_outputs.items()}
         data_to_save['calculated_financials'] = calculated_data
 
-        # Default filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         default_filename = f"mls_data_{timestamp}.json"
 
@@ -520,7 +576,6 @@ class MLSDataExtractor:
 
         if filename:
             try:
-                # Ensure the export directory exists
                 os.makedirs(os.path.dirname(filename), exist_ok=True)
                 with open(filename, 'w') as f:
                     json.dump(data_to_save, f, indent=2)
@@ -536,9 +591,9 @@ class MLSDataExtractor:
         for var in self.entry_vars.values():
             var.set("")
         for var in self.calculated_outputs.values():
-            var.set("N/A")  # Clear calculated outputs too
+            var.set("N/A")
         self.content_text.delete(1.0, tk.END)
-        self.file_path_var.set("")  # Clear file path as well
+        self.file_path_var.set("")
         self.status_var.set("Ready")
 
     def run(self):

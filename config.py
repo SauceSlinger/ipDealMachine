@@ -4,8 +4,9 @@ import os
 
 # Application settings
 APP_NAME = "MLS PDF Data Extractor"
-APP_VERSION = "1.0.1"
-WINDOW_SIZE = "800x900"
+APP_VERSION = "1.0.2"
+# Default window size (adjusted for the two-column layout)
+WINDOW_SIZE = "1400x950"
 
 # File paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -16,6 +17,13 @@ SAMPLE_DIR = os.path.join(DATA_DIR, "sample_pdfs")
 # Create directories if they don't exist
 os.makedirs(EXPORTS_DIR, exist_ok=True)
 os.makedirs(SAMPLE_DIR, exist_ok=True)
+
+# Define Century 21 inspired color palette
+C21_GOLD = '#DAA520' # A rich gold
+C21_BLACK = '#000000'
+C21_DARK_GRAY = '#333333'
+C21_WHITE = '#FFFFFF'
+C21_LIGHT_GRAY = '#F5F5F5' # For general backgrounds
 
 # Default values for fields (King County WA averages/common values)
 DEFAULT_VALUES = {
