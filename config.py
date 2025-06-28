@@ -4,7 +4,7 @@ import os
 
 # Application settings
 APP_NAME = "MLS PDF Data Extractor"
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 # Default window size (adjusted for the two-column layout)
 WINDOW_SIZE = "1400x950"
 
