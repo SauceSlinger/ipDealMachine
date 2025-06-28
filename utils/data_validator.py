@@ -2,6 +2,9 @@
 import re
 from typing import Dict, Any, Tuple
 
+# Import centralized field definitions
+from config import NUMERIC_FIELDS, PERCENTAGE_FIELDS, INTEGER_FIELDS
+
 class DataValidator:
     @staticmethod
     def validate_numeric(value: str, field_name: str) -> Tuple[bool, str]:
@@ -37,7 +40,8 @@ class DataValidator:
         if not value:
             return True, ""
         try:
-            int(value)
+            # Allow floats to be entered and convert to int if possible for fields like "Loan Terms"
+            int(float(value))
             return True, ""
         except ValueError:
             return False, f"{field_name} must be a whole number"
@@ -47,26 +51,19 @@ class DataValidator:
         """Validate all fields and return error messages"""
         errors = {}
         # Numeric validations
-        numeric_fields = [
-            'monthly_rent_per_unit', 'property_taxes', 'insurance',
-            'property_management_fees', 'maintenance_repairs', 'utilities',
-            'purchase_price', 'down_payment', 'gross_scheduled_income' # Added gross_scheduled_income
-        ]
-        for field in numeric_fields:
+        for field in NUMERIC_FIELDS: # Use imported list
             if field in data:
                 valid, error = DataValidator.validate_numeric(data[field], field.replace('_', ' ').title())
                 if not valid:
                     errors[field] = error
         # Percentage validations
-        percentage_fields = ['vacancy_rate', 'interest_rate']
-        for field in percentage_fields:
+        for field in PERCENTAGE_FIELDS: # Use imported list
             if field in data:
                 valid, error = DataValidator.validate_percentage(data[field], field.replace('_', ' ').title())
                 if not valid:
                     errors[field] = error
         # Integer validations
-        integer_fields = ['number_of_units', 'loan_terms_years']
-        for field in integer_fields:
+        for field in INTEGER_FIELDS: # Use imported list
             if field in data:
                 valid, error = DataValidator.validate_integer(data[field], field.replace('_', ' ').title())
                 if not valid:

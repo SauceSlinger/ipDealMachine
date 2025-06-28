@@ -14,7 +14,10 @@ import logging
 import re  # Import the regex module
 
 # Import our custom modules
-from config import APP_NAME, APP_VERSION, WINDOW_SIZE, EXPORTS_DIR, DEFAULT_VALUES
+from config import (
+    APP_NAME, APP_VERSION, WINDOW_SIZE, EXPORTS_DIR, DEFAULT_VALUES,
+    GUI_FIELD_ORDER, NUMERIC_FIELDS, PERCENTAGE_FIELDS, INTEGER_FIELDS  # <-- ADDED THESE IMPORTS
+)
 from patterns import extract_data_with_patterns
 from utils.pdf_processor import PDFProcessor
 from utils.data_validator import DataValidator
@@ -54,24 +57,32 @@ class MLSDataExtractor:
         self.pdf_processor = PDFProcessor()
         self.validator = DataValidator()
 
-        # Data structure for extracted information
-        self.extracted_data = {
-            'number_of_units': '',
-            'monthly_rent_per_unit': '',
-            'vacancy_rate': '',
-            'property_taxes': '',
-            'insurance': '',
-            'property_management_fees': '',
-            'maintenance_repairs': '',
-            'utilities': '',
-            'purchase_price': '',
-            'down_payment': '',
-            'interest_rate': '',
-            'loan_terms_years': '',
-            'gross_scheduled_income': ''  # New field added here
+        # Data structure for extracted information (input fields)
+        # This will be populated from GUI_FIELD_ORDER dynamically
+        self.extracted_data = {key: '' for label, key in GUI_FIELD_ORDER}
+
+        # Data structure for calculated outputs
+        self.calculated_outputs = {
+            'gpi': tk.StringVar(value="N/A"),
+            'vc': tk.StringVar(value="N/A"),
+            'egi': tk.StringVar(value="N/A"),
+            'noi': tk.StringVar(value="N/A"),
+            'cap_rate': tk.StringVar(value="N/A"),
+            'debt_service': tk.StringVar(value="N/A"),
+            'cfbt': tk.StringVar(value="N/A"),
+            'coc_return': tk.StringVar(value="N/A"),
+            'grm': tk.StringVar(value="N/A"),
+            'dscr': tk.StringVar(value="N/A")
         }
 
         self.setup_ui()
+        # Automatically load defaults and calculate on application start
+        self.root.after(100, self.load_defaults_and_calculate)
+
+    def load_defaults_and_calculate(self):
+        """Loads defaults and then triggers a calculation. Used on app start."""
+        self.load_defaults()
+        self.calculate_projections()
 
     def setup_ui(self):
         # Main frame
@@ -111,45 +122,32 @@ class MLSDataExtractor:
         status_label = ttk.Label(main_frame, textvariable=self.status_var, font=('Arial', 9, 'italic'))
         status_label.grid(row=4, column=0, columnspan=3, pady=5)
 
-        # Data fields frame
-        fields_frame = ttk.LabelFrame(main_frame, text="Extracted Data", padding="15")
+        # Data fields frame (Inputs)
+        fields_frame = ttk.LabelFrame(main_frame, text="Input Data", padding="15")
         fields_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=20)
         fields_frame.columnconfigure(1, weight=1)
 
-        # Create entry fields for each data point
+        # Create entry fields for each data point using GUI_FIELD_ORDER
         self.entry_vars = {}
         self.entries = {}
 
-        fields = [
-            ("Number of Units", "number_of_units"),
-            ("Monthly Rent per Unit ($)", "monthly_rent_per_unit"),
-            ("Vacancy Rate (%)", "vacancy_rate"),
-            ("Property Taxes ($)", "property_taxes"),
-            ("Insurance ($)", "insurance"),
-            ("Property Management Fees ($)", "property_management_fees"),
-            ("Maintenance and Repairs ($)", "maintenance_repairs"),
-            ("Utilities ($)", "utilities"),
-            ("Purchase Price ($)", "purchase_price"),
-            ("Down Payment ($)", "down_payment"),
-            ("Interest Rate (%)", "interest_rate"),
-            ("Loan Terms (Years)", "loan_terms_years"),
-            ("Gross Scheduled Income ($)", "gross_scheduled_income")  # New label and key for UI
-        ]
-
-        for i, (label, key) in enumerate(fields):
+        for i, (label, key) in enumerate(GUI_FIELD_ORDER):
             ttk.Label(fields_frame, text=label + ":").grid(row=i, column=0, sticky=tk.W, pady=2)
             var = tk.StringVar()
-            entry = ttk.Entry(fields_frame, textvariable=var, width=40)  # Increased width
+            entry = ttk.Entry(fields_frame, textvariable=var, width=40)
             entry.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=2, padx=(10, 0))
 
             self.entry_vars[key] = var
             self.entries[key] = entry
 
+            # Add trace to update calculations when input fields change
+            var.trace_add("write", lambda name, index, mode, var=var: self.calculate_projections())
+
         # Buttons frame
         buttons_frame = ttk.Frame(main_frame)
         buttons_frame.grid(row=6, column=0, columnspan=3, pady=20)
 
-        # Save, Clear, and Validate buttons
+        # Save, Clear, Validate, and Load Defaults buttons
         save_btn = ttk.Button(buttons_frame, text="Save to JSON", command=self.save_data)
         save_btn.grid(row=0, column=0, padx=5)
 
@@ -162,19 +160,49 @@ class MLSDataExtractor:
         defaults_btn = ttk.Button(buttons_frame, text="Load Defaults", command=self.load_defaults)
         defaults_btn.grid(row=0, column=3, padx=5)
 
+        calculate_btn = ttk.Button(buttons_frame, text="Calculate Financials", command=self.calculate_projections,
+                                   style='Accent.TButton')
+        calculate_btn.grid(row=0, column=4, padx=5)
+
+        # Financial Projections Output Pane
+        output_frame = ttk.LabelFrame(main_frame, text="Financial Projections", padding="15")
+        output_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=20)
+        output_frame.columnconfigure(1, weight=1)  # Allow output values to expand
+
+        output_fields = [
+            ("Gross Potential Income (GPI)", "gpi"),
+            ("Vacancy and Credit Loss (V&C)", "vc"),
+            ("Effective Gross Income (EGI)", "egi"),
+            ("Net Operating Income (NOI)", "noi"),
+            ("Capitalization Rate (Cap Rate)", "cap_rate"),
+            ("Debt Service (Mortgage Payment)", "debt_service"),
+            ("Cash Flow Before Taxes (CFBT)", "cfbt"),
+            ("Cash-on-Cash Return (CoC)", "coc_return"),
+            ("Gross Rent Multiplier (GRM)", "grm"),
+            ("Debt Service Coverage Ratio (DSCR)", "dscr")
+        ]
+
+        for i, (label, key) in enumerate(output_fields):
+            ttk.Label(output_frame, text=label + ":", font=('Arial', 10, 'bold')).grid(row=i, column=0, sticky=tk.W,
+                                                                                       pady=2)
+            ttk.Label(output_frame, textvariable=self.calculated_outputs[key], font=('Arial', 10)).grid(row=i, column=1,
+                                                                                                        sticky=tk.W,
+                                                                                                        pady=2,
+                                                                                                        padx=(10, 0))
+
         # PDF content preview
         preview_frame = ttk.LabelFrame(main_frame, text="PDF Content Preview", padding="15")
-        preview_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(20, 0))
+        preview_frame.grid(row=8, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(20, 0))
         preview_frame.columnconfigure(0, weight=1)
         preview_frame.rowconfigure(0, weight=1)
 
-        self.content_text = scrolledtext.ScrolledText(preview_frame, height=10, width=70,
-                                                      wrap=tk.WORD)  # Added word wrap
+        self.content_text = scrolledtext.ScrolledText(preview_frame, height=10, width=70, wrap=tk.WORD)
         self.content_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # Configure grid weights for resizing
-        main_frame.rowconfigure(5, weight=1)
-        main_frame.rowconfigure(7, weight=1)
+        main_frame.rowconfigure(5, weight=1)  # Input fields frame
+        main_frame.rowconfigure(7, weight=1)  # Output fields frame
+        main_frame.rowconfigure(8, weight=1)  # PDF preview frame
 
     def browse_file(self):
         filename = filedialog.askopenfilename(
@@ -218,8 +246,13 @@ class MLSDataExtractor:
             extracted = extract_data_with_patterns(text_content)
 
             # Update UI with extracted data
+            # First, load defaults to fill in any missing non-extracted fields
+            self.root.after(0, self.load_defaults)
+            # Then, update with extracted data which will overwrite defaults
             self.root.after(0, lambda: self.update_fields(extracted))
-            self.root.after(0, lambda: self.status_var.set("Data extraction completed"))
+
+            self.root.after(0, lambda: self.status_var.set("Data extraction completed. Calculating financials..."))
+            self.root.after(0, self.calculate_projections)  # Calculate after extraction
 
             logger.info(f"Successfully extracted data from {file_path}")
 
@@ -243,25 +276,221 @@ class MLSDataExtractor:
             messagebox.showerror("Validation Errors", error_msg)
         else:
             messagebox.showinfo("Validation Success", "All data is valid!")
+            self.calculate_projections()  # Calculate after successful validation
 
     def load_defaults(self):
         """Load default values for common fields"""
-        for field, default_value in DEFAULT_VALUES.items():
-            if field in self.entry_vars and not self.entry_vars[field].get():
-                self.entry_vars[field].set(default_value)
-        self.status_var.set("Default values loaded")
+        for field_label, field_key in GUI_FIELD_ORDER:  # Iterate through the defined order
+            if field_key in self.entry_vars:  # Only set if the field exists in the GUI
+                current_value = self.entry_vars[field_key].get()
+                default_value = DEFAULT_VALUES.get(field_key, '')  # Get default, or empty string if not defined
+                # Only load default if the field is currently empty or 'N/A'
+                if not current_value or current_value == "N/A":
+                    self.entry_vars[field_key].set(default_value)
+        self.status_var.set("Default values loaded. Calculating financials...")
+        self.calculate_projections()  # Calculate after loading defaults
 
     def update_fields(self, extracted_data):
-        """Update UI fields with extracted data"""
+        """Update UI fields with extracted data, overwriting existing values."""
         for field, value in extracted_data.items():
-            if field in self.entry_vars and value is not None:  # Check for None explicitly
+            if field in self.entry_vars and value is not None:
                 self.entry_vars[field].set(value)
 
+    def calculate_projections(self):
+        """Calculate and update financial projection outputs."""
+        # Get all current input values
+        inputs = {}
+        for key, var in self.entry_vars.items():
+            value = var.get().strip().replace('$', '').replace(',', '')
+            if value == "":
+                inputs[key] = None
+            else:
+                try:
+                    # Use a general numeric conversion for safety before specific type casting
+                    numeric_value = float(value)
+                    if key in INTEGER_FIELDS:  # Use imported INTEGER_FIELDS
+                        inputs[key] = int(numeric_value)
+                    elif key in PERCENTAGE_FIELDS:  # Use imported PERCENTAGE_FIELDS
+                        inputs[key] = numeric_value
+                    elif key in NUMERIC_FIELDS:  # Use imported NUMERIC_FIELDS
+                        inputs[key] = numeric_value
+                    else:  # Fallback for any other unexpected field types
+                        inputs[key] = numeric_value
+                except ValueError:
+                    inputs[key] = None  # Mark as invalid if conversion fails
+
+        # Reset all calculated outputs to N/A
+        for key in self.calculated_outputs:
+            self.calculated_outputs[key].set("N/A")
+
+        try:
+            # 1. Gross Potential Income (GPI)
+            # Prioritize Gross Scheduled Income if available, otherwise use units * monthly rent
+            gross_scheduled_income = inputs.get('gross_scheduled_income')
+            num_units = inputs.get('number_of_units')
+            monthly_rent_per_unit = inputs.get('monthly_rent_per_unit')
+            purchase_price = inputs.get('purchase_price')
+
+            gpi = None
+            if gross_scheduled_income is not None:
+                gpi = gross_scheduled_income
+                self.status_var.set("Using Gross Scheduled Income for GPI.")
+            elif num_units is not None and monthly_rent_per_unit is not None:
+                gpi = num_units * monthly_rent_per_unit * 12
+
+            if gpi is None:  # Exit if GPI cannot be calculated
+                self.status_var.set(
+                    "Cannot calculate GPI. Needs 'Number of Units' AND 'Monthly Rent per Unit' OR 'Gross Scheduled Income'.")
+                return
+            self.calculated_outputs['gpi'].set(f"${gpi:,.2f}")
+
+            # 2. Vacancy and Credit Loss (V&C)
+            vacancy_rate = inputs.get('vacancy_rate')
+            # If vacancy rate is not extracted, use the default from config.py
+            if vacancy_rate is None:
+                try:
+                    vacancy_rate = float(DEFAULT_VALUES.get('vacancy_rate', '0'))
+                    # No need to update GUI here, load_defaults handles it on startup/extract
+                except ValueError:
+                    vacancy_rate = 0.0  # Fallback if default is also invalid
+
+            vc = gpi * (vacancy_rate / 100)
+            self.calculated_outputs['vc'].set(f"${vc:,.2f}")
+
+            # 3. Effective Gross Income (EGI)
+            egi = gpi - vc
+            self.calculated_outputs['egi'].set(f"${egi:,.2f}")
+
+            # 4. Net Operating Income (NOI)
+            # Fetch all expenses, ensuring they are numbers, defaulting to 0 if not present/invalid
+            property_taxes = inputs.get('property_taxes') or float(DEFAULT_VALUES.get('property_taxes', '0') or '0')
+            insurance = inputs.get('insurance') or float(DEFAULT_VALUES.get('insurance', '0') or '0')
+            property_management_fees = inputs.get('property_management_fees') or float(
+                DEFAULT_VALUES.get('property_management_fees', '0') or '0')
+            maintenance_repairs = inputs.get('maintenance_repairs') or float(
+                DEFAULT_VALUES.get('maintenance_repairs', '0') or '0')
+            utilities = inputs.get('utilities') or float(DEFAULT_VALUES.get('utilities', '0') or '0')
+
+            expenses = (property_taxes + insurance + property_management_fees +
+                        maintenance_repairs + utilities)
+
+            noi = egi - expenses
+            self.calculated_outputs['noi'].set(f"${noi:,.2f}")
+
+            # 5. Capitalization Rate (Cap Rate)
+            if purchase_price is None:  # purchase_price might not be extracted from PDF
+                purchase_price = float(DEFAULT_VALUES.get('purchase_price', '0') or '0')
+
+            if purchase_price > 0:
+                cap_rate = (noi / purchase_price) * 100
+                self.calculated_outputs['cap_rate'].set(f"{cap_rate:.2f}%")
+            else:
+                self.calculated_outputs['cap_rate'].set("N/A (Purchase Price Missing/Zero)")
+
+            # 6. Debt Service (Mortgage Payment)
+            down_payment_percent = inputs.get('down_payment') or float(DEFAULT_VALUES.get('down_payment', '0') or '0')
+            interest_rate = inputs.get('interest_rate') or float(DEFAULT_VALUES.get('interest_rate', '0') or '0')
+            loan_terms_years = inputs.get('loan_terms_years') or int(
+                float(DEFAULT_VALUES.get('loan_terms_years', '0') or '0'))
+
+            mortgage_payment = None
+            if purchase_price is not None and purchase_price > 0 and down_payment_percent is not None and \
+                    interest_rate is not None and loan_terms_years is not None and loan_terms_years > 0:
+
+                down_payment_amount = purchase_price * (down_payment_percent / 100)
+                loan_amount = purchase_price - down_payment_amount
+
+                if loan_amount <= 0:
+                    self.calculated_outputs['debt_service'].set("N/A (Loan Amount Zero/Negative)")
+                else:
+                    if interest_rate == 0:
+                        mortgage_payment = loan_amount / (loan_terms_years * 12) if (loan_terms_years * 12) > 0 else 0
+                    else:
+                        monthly_interest_rate = (interest_rate / 100) / 12
+                        num_payments = loan_terms_years * 12
+
+                        if monthly_interest_rate == 0:
+                            mortgage_payment = loan_amount / num_payments if num_payments > 0 else 0
+                        else:
+                            try:
+                                mortgage_payment = loan_amount * (
+                                            monthly_interest_rate * (1 + monthly_interest_rate) ** num_payments) / \
+                                                   ((1 + monthly_interest_rate) ** num_payments - 1)
+                            except ZeroDivisionError:
+                                mortgage_payment = float('inf')
+
+                if mortgage_payment is not None and mortgage_payment != float('inf'):
+                    self.calculated_outputs['debt_service'].set(f"${mortgage_payment:,.2f}")
+                else:
+                    self.calculated_outputs['debt_service'].set("N/A (Loan Calculation Issue)")
+            else:
+                self.calculated_outputs['debt_service'].set("N/A (Loan Inputs Missing/Invalid)")
+
+            # 7. Cash Flow Before Taxes (CFBT)
+            cfbt = None
+            debt_service_str = self.calculated_outputs['debt_service'].get()
+            if debt_service_str and "N/A" not in debt_service_str and noi is not None:
+                try:
+                    monthly_mortgage_payment = float(debt_service_str.replace('$', '').replace(',', ''))
+                    cfbt = noi - (monthly_mortgage_payment * 12)
+                    self.calculated_outputs['cfbt'].set(f"${cfbt:,.2f}")
+                except ValueError:
+                    self.calculated_outputs['cfbt'].set("N/A (Invalid Debt Service Value)")
+            else:
+                self.calculated_outputs['cfbt'].set("N/A (NOI or Debt Service Missing)")
+
+            # 8. Cash-on-Cash Return (CoC)
+            coc_return = None
+            if cfbt is not None and purchase_price is not None and purchase_price > 0 and down_payment_percent is not None:
+                initial_equity_invested = purchase_price * (down_payment_percent / 100)
+                if initial_equity_invested > 0:
+                    coc_return = (cfbt / initial_equity_invested) * 100
+                    self.calculated_outputs['coc_return'].set(f"{coc_return:.2f}%")
+                else:
+                    self.calculated_outputs['coc_return'].set("N/A (Initial Equity Zero/Negative)")
+            else:
+                self.calculated_outputs['coc_return'].set("N/A (CFBT or Equity Inputs Missing)")
+
+            # 9. Gross Rent Multiplier (GRM)
+            grm = None
+            if purchase_price is not None and purchase_price > 0 and gpi is not None and gpi > 0:
+                grm = purchase_price / gpi
+                self.calculated_outputs['grm'].set(f"{grm:.2f}")
+            else:
+                self.calculated_outputs['grm'].set("N/A (Purchase Price or GPI Missing/Zero)")
+
+            # 10. Debt Service Coverage Ratio (DSCR)
+            dscr = None
+            if noi is not None and debt_service_str and "N/A" not in debt_service_str:
+                try:
+                    monthly_mortgage_payment = float(debt_service_str.replace('$', '').replace(',', ''))
+                    annual_debt_service = monthly_mortgage_payment * 12
+                    if annual_debt_service > 0:
+                        dscr = noi / annual_debt_service
+                        self.calculated_outputs['dscr'].set(f"{dscr:.2f}")
+                    else:
+                        self.calculated_outputs['dscr'].set("N/A (Annual Debt Service Zero/Negative)")
+                except ValueError:
+                    self.calculated_outputs['dscr'].set("N/A (Invalid Debt Service Value)")
+            else:
+                self.calculated_outputs['dscr'].set("N/A (NOI or Debt Service Missing/Zero)")
+
+            self.status_var.set("Financial projections updated.")
+
+        except ValueError as ve:
+            self.status_var.set(f"Calculation Error: {ve}")
+            logger.warning(f"Calculation error: {ve}")
+        except Exception as e:
+            self.status_var.set(f"An unexpected calculation error occurred: {str(e)}")
+            logger.error(f"Unexpected calculation error: {e}")
+
     def save_data(self):
-        """Save extracted data to JSON file"""
+        """Save extracted and current input data to JSON file"""
+        # Get all current input data
+        data_to_save = {field: var.get() for field, var in self.entry_vars.items()}
+
         # Validate data first
-        data = {field: var.get() for field, var in self.entry_vars.items()}
-        errors = self.validator.validate_all_fields(data)
+        errors = self.validator.validate_all_fields(data_to_save)
 
         if errors:
             if not messagebox.askyesno("Validation Errors",
@@ -269,9 +498,13 @@ class MLSDataExtractor:
                 return
 
         # Add metadata
-        data['extraction_date'] = datetime.now().isoformat()
-        data['source_file'] = self.file_path_var.get()
-        data['app_version'] = APP_VERSION
+        data_to_save['extraction_date'] = datetime.now().isoformat()
+        data_to_save['source_file'] = self.file_path_var.get()
+        data_to_save['app_version'] = APP_VERSION
+
+        # Add calculated outputs to the saved data
+        calculated_data = {key: var.get() for key, var in self.calculated_outputs.items()}
+        data_to_save['calculated_financials'] = calculated_data
 
         # Default filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -290,7 +523,7 @@ class MLSDataExtractor:
                 # Ensure the export directory exists
                 os.makedirs(os.path.dirname(filename), exist_ok=True)
                 with open(filename, 'w') as f:
-                    json.dump(data, f, indent=2)
+                    json.dump(data_to_save, f, indent=2)
                 messagebox.showinfo("Success", f"Data saved to {filename}")
                 logger.info(f"Data saved to {filename}")
             except Exception as e:
@@ -302,6 +535,8 @@ class MLSDataExtractor:
         """Clear all fields"""
         for var in self.entry_vars.values():
             var.set("")
+        for var in self.calculated_outputs.values():
+            var.set("N/A")  # Clear calculated outputs too
         self.content_text.delete(1.0, tk.END)
         self.file_path_var.set("")  # Clear file path as well
         self.status_var.set("Ready")
