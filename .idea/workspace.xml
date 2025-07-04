@@ -4,11 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1e72955a-655e-434c-9e59-4d22ee630f80" name="Changes" comment="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.1&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA">
+    <list default="true" id="1e72955a-655e-434c-9e59-4d22ee630f80" name="Changes" comment="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more immersive experience with the application&#10;&#10;version 1.0.4&#10;feat: Enhance UI with dynamic color-coding and improve PDF extraction&#10;&#10;This commit introduces significant visual and functional enhancements to the MLS PDF Extractor.&#10;&#10;- **Dynamic Input Field Color-Coding:** Implemented a system to visually distinguish input data sources:&#10;    - Yellow for default values.&#10;    - Blue for manually adjusted values.&#10;    - Green for extracted data from PDFs.&#10;    - Colors update instantly upon user interaction or data loading.&#10;- **7-Color Gradient for Financial Projections:** Output fields now display a gradient from bright red (worst) to bright green (best), with white as neutral, providing immediate performance insights.&#10;- **Comprehensive Color Keys:** Added clear legends for both input and output color meanings to the GUI.&#10;- **Expanded PDF Extraction Patterns:** Updated `patterns.py` with more flexible regex patterns and synonyms to improve data capture from diverse MLS PDF formats.&#10;- **Refactored Database Handling for Thread Safety:** Modified `utils/database.py` to ensure each database operation uses a new connection, resolving `SQLite objects created in a thread can only be used in that same thread` errors.&#10;- **UI Stability Fixes:** Corrected `AttributeError: 'StringVar' object has no attribute 'winfo_exists'` in `browse_file()` and `_tkinter.TclError: unknown option &quot;-fieldbackground&quot;` by refining `ttk.Entry` styling methods.&#10;&#10;These changes significantly improve the application's usability, data accuracy, and overall robustness.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Main.py" beforeDir="false" afterPath="$PROJECT_DIR$/Main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/database.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,12 +31,12 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;SacredSeb&quot;
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "SauceSlinger"
   }
-}</component>
+}]]></component>
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/SacredSeb/ipDealMachine.git&quot;,
@@ -59,6 +59,7 @@
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;Python.Main.executor&quot;: &quot;Run&quot;,
     &quot;Python.data_validator.executor&quot;: &quot;Run&quot;,
+    &quot;Python.database.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
@@ -112,7 +113,31 @@
       <option name="project" value="LOCAL" />
       <updated>1751079959439</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.1&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA">
+      <option name="closed" value="true" />
+      <created>1751082467221</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1751082467221</updated>
+    </task>
+    <task id="LOCAL-00006" summary="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more emmersive experience with the application">
+      <option name="closed" value="true" />
+      <created>1751082538083</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1751082538084</updated>
+    </task>
+    <task id="LOCAL-00007" summary="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more immersive experience with the application&#10;&#10;version 1.0.4&#10;feat: Enhance UI with dynamic color-coding and improve PDF extraction&#10;&#10;This commit introduces significant visual and functional enhancements to the MLS PDF Extractor.&#10;&#10;- **Dynamic Input Field Color-Coding:** Implemented a system to visually distinguish input data sources:&#10;    - Yellow for default values.&#10;    - Blue for manually adjusted values.&#10;    - Green for extracted data from PDFs.&#10;    - Colors update instantly upon user interaction or data loading.&#10;- **7-Color Gradient for Financial Projections:** Output fields now display a gradient from bright red (worst) to bright green (best), with white as neutral, providing immediate performance insights.&#10;- **Comprehensive Color Keys:** Added clear legends for both input and output color meanings to the GUI.&#10;- **Expanded PDF Extraction Patterns:** Updated `patterns.py` with more flexible regex patterns and synonyms to improve data capture from diverse MLS PDF formats.&#10;- **Refactored Database Handling for Thread Safety:** Modified `utils/database.py` to ensure each database operation uses a new connection, resolving `SQLite objects created in a thread can only be used in that same thread` errors.&#10;- **UI Stability Fixes:** Corrected `AttributeError: 'StringVar' object has no attribute 'winfo_exists'` in `browse_file()` and `_tkinter.TclError: unknown option &quot;-fieldbackground&quot;` by refining `ttk.Entry` styling methods.&#10;&#10;These changes significantly improve the application's usability, data accuracy, and overall robustness.">
+      <option name="closed" value="true" />
+      <created>1751595554297</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1751595554297</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -129,6 +154,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files" />
     <MESSAGE value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.1&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA" />
-    <option name="LAST_COMMIT_MESSAGE" value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.1&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA" />
+    <MESSAGE value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more emmersive experience with the application" />
+    <MESSAGE value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more immersive experience with the application&#10;&#10;version 1.0.4&#10;feat: Enhance UI with dynamic color-coding and improve PDF extraction&#10;&#10;This commit introduces significant visual and functional enhancements to the MLS PDF Extractor.&#10;&#10;- **Dynamic Input Field Color-Coding:** Implemented a system to visually distinguish input data sources:&#10;    - Yellow for default values.&#10;    - Blue for manually adjusted values.&#10;    - Green for extracted data from PDFs.&#10;    - Colors update instantly upon user interaction or data loading.&#10;- **7-Color Gradient for Financial Projections:** Output fields now display a gradient from bright red (worst) to bright green (best), with white as neutral, providing immediate performance insights.&#10;- **Comprehensive Color Keys:** Added clear legends for both input and output color meanings to the GUI.&#10;- **Expanded PDF Extraction Patterns:** Updated `patterns.py` with more flexible regex patterns and synonyms to improve data capture from diverse MLS PDF formats.&#10;- **Refactored Database Handling for Thread Safety:** Modified `utils/database.py` to ensure each database operation uses a new connection, resolving `SQLite objects created in a thread can only be used in that same thread` errors.&#10;- **UI Stability Fixes:** Corrected `AttributeError: 'StringVar' object has no attribute 'winfo_exists'` in `browse_file()` and `_tkinter.TclError: unknown option &quot;-fieldbackground&quot;` by refining `ttk.Entry` styling methods.&#10;&#10;These changes significantly improve the application's usability, data accuracy, and overall robustness." />
+    <option name="LAST_COMMIT_MESSAGE" value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more immersive experience with the application&#10;&#10;version 1.0.4&#10;feat: Enhance UI with dynamic color-coding and improve PDF extraction&#10;&#10;This commit introduces significant visual and functional enhancements to the MLS PDF Extractor.&#10;&#10;- **Dynamic Input Field Color-Coding:** Implemented a system to visually distinguish input data sources:&#10;    - Yellow for default values.&#10;    - Blue for manually adjusted values.&#10;    - Green for extracted data from PDFs.&#10;    - Colors update instantly upon user interaction or data loading.&#10;- **7-Color Gradient for Financial Projections:** Output fields now display a gradient from bright red (worst) to bright green (best), with white as neutral, providing immediate performance insights.&#10;- **Comprehensive Color Keys:** Added clear legends for both input and output color meanings to the GUI.&#10;- **Expanded PDF Extraction Patterns:** Updated `patterns.py` with more flexible regex patterns and synonyms to improve data capture from diverse MLS PDF formats.&#10;- **Refactored Database Handling for Thread Safety:** Modified `utils/database.py` to ensure each database operation uses a new connection, resolving `SQLite objects created in a thread can only be used in that same thread` errors.&#10;- **UI Stability Fixes:** Corrected `AttributeError: 'StringVar' object has no attribute 'winfo_exists'` in `browse_file()` and `_tkinter.TclError: unknown option &quot;-fieldbackground&quot;` by refining `ttk.Entry` styling methods.&#10;&#10;These changes significantly improve the application's usability, data accuracy, and overall robustness." />
   </component>
 </project>

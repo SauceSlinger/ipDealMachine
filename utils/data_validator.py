@@ -51,19 +51,19 @@ class DataValidator:
         """Validate all fields and return error messages"""
         errors = {}
         # Numeric validations
-        for field in NUMERIC_FIELDS: # Use imported list
+        for field in NUMERIC_FIELDS:
             if field in data:
                 valid, error = DataValidator.validate_numeric(data[field], field.replace('_', ' ').title())
                 if not valid:
                     errors[field] = error
         # Percentage validations
-        for field in PERCENTAGE_FIELDS: # Use imported list
+        for field in PERCENTAGE_FIELDS:
             if field in data:
                 valid, error = DataValidator.validate_percentage(data[field], field.replace('_', ' ').title())
                 if not valid:
                     errors[field] = error
         # Integer validations
-        for field in INTEGER_FIELDS: # Use imported list
+        for field in INTEGER_FIELDS:
             if field in data:
                 valid, error = DataValidator.validate_integer(data[field], field.replace('_', ' ').title())
                 if not valid:
