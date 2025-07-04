@@ -4,11 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1e72955a-655e-434c-9e59-4d22ee630f80" name="Changes" comment="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.1&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA">
+    <list default="true" id="1e72955a-655e-434c-9e59-4d22ee630f80" name="Changes" comment="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more emmersive experience with the application">
+      <change afterPath="$PROJECT_DIR$/utils/database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Main.py" beforeDir="false" afterPath="$PROJECT_DIR$/Main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/patterns.py" beforeDir="false" afterPath="$PROJECT_DIR$/patterns.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/data_validator.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/data_validator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -112,7 +115,23 @@
       <option name="project" value="LOCAL" />
       <updated>1751079959439</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.1&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA">
+      <option name="closed" value="true" />
+      <created>1751082467221</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1751082467221</updated>
+    </task>
+    <task id="LOCAL-00006" summary="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more emmersive experience with the application">
+      <option name="closed" value="true" />
+      <created>1751082538083</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1751082538084</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -129,6 +148,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files" />
     <MESSAGE value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.1&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA" />
-    <option name="LAST_COMMIT_MESSAGE" value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.1&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA" />
+    <MESSAGE value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more emmersive experience with the application" />
+    <option name="LAST_COMMIT_MESSAGE" value="MLS PDF Data Extractor&#10;A desktop application for extracting real estate data from MLS PDF files&#10;&#10;Version 1.0.2&#10;all calculations are working and utilizing either information gathered from the document or a collection of defaults for King county WA&#10;&#10;Version 1.0.3&#10;modified visual formatting to create a more emmersive experience with the application" />
   </component>
 </project>
