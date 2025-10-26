@@ -24,7 +24,7 @@ setup(
     description="A desktop application for extracting real estate data from MLS PDF documents and performing financial projections",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/ipDealMachine",
+    url="https://github.com/SauceSlinger/ipDealMachine",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -53,7 +53,7 @@ setup(
     },
     keywords="real-estate mls pdf extraction financial-analysis investment",
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/ipDealMachine/issues",
-        "Source": "https://github.com/yourusername/ipDealMachine",
+        "Bug Reports": "https://github.com/SauceSlinger/ipDealMachine/issues",
+        "Source": "https://github.com/SauceSlinger/ipDealMachine",
     },
 )
