@@ -1,136 +1,173 @@
-# MLS PDF Extractor - Version 1.0.4
+# MLS PDF Data Extractor
 
-Welcome to the MLS PDF Extractor, a desktop application designed to streamline the process of extracting key real estate data from MLS PDF documents and performing financial projections. This tool is built to help real estate investors quickly analyze potential investment properties.
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## What's New in Version 1.0.4 (The Visual & Robust Update!)
+A modern desktop application for extracting real estate data from MLS PDF documents and performing comprehensive financial projections. Built with CustomTkinter for a beautiful, responsive interface.
 
-This version brings significant enhancements to the user interface, making data interaction more intuitive, and crucial under-the-hood improvements for stability and extraction accuracy.
+## ✨ Features
 
-### ✨ Key Features & Enhancements:
+### 🎨 Modern UI with CustomTkinter
+- Beautiful off-white theme with mint and gold accents
+- Rounded corners and modern styling
+- Responsive three-column layout
+- Color-coded input fields and financial projections
 
-Dynamic Color-Coded Input Fields:
+### 📊 Dynamic Data Visualization
+- **Input Fields**: Color-coded by data source
+  - 🟡 Yellow: Default values
+  - 🔵 Blue: Manually adjusted data
+  - 🟢 Green: PDF-extracted data
+- **Financial Projections**: 7-color gradient system
+  - 🔴 Red: Poor performance
+  - ⚪ White: Break-even
+  - 🟢 Green: Excellent performance
 
-* Yellow Background: Indicates default values.
+### 🤖 Advanced PDF Processing
+- Intelligent pattern recognition for MLS documents
+- Support for multiple PDF formats and layouts
+- Fallback processing with PyPDF2
+- Comprehensive data extraction including:
+  - Property details (address, MLS number, community)
+  - Financial data (purchase price, taxes, expenses)
+  - Property specifications (sqft, units, year built)
 
-* Blue Background: Shows data that has been manually adjusted by you.
+### 💰 Financial Analysis
+Comprehensive real estate investment calculations:
+- **GPI** - Gross Potential Income
+- **V&C** - Vacancy and Credit Loss
+- **EGI** - Effective Gross Income
+- **NOI** - Net Operating Income
+- **Cap Rate** - Capitalization Rate
+- **Debt Service** - Mortgage Payment
+- **CFBT** - Cash Flow Before Taxes
+- **CoC Return** - Cash-on-Cash Return
+- **GRM** - Gross Rent Multiplier
+- **DSCR** - Debt Service Coverage Ratio
 
-* Green Background: Highlights data successfully extracted from a PDF.
+### 🗄️ Data Management
+- SQLite database for persistent storage
+- Save/load property data and projections
+- JSON export functionality
+- Property list with search and filtering
 
-* Input field colors update instantly as data changes!
+## 🚀 Installation
 
-Intuitive 7-Color Gradient for Financial Projections:
+### Prerequisites
+- Python 3.8 or higher
+- Tkinter (usually included with Python)
 
-* Output values are now color-coded on a gradient from bright red (most negative/worst performance) through white (neutral/break-even) to bright green (best performance).
+### Quick Start
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/ipDealMachine.git
+cd ipDealMachine
 
-* This provides immediate visual feedback on the health and potential of your investment projections.
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-Clear Color Keys: Dedicated legends below both the input and output sections explain the meaning of each color, ensuring clarity at a glance.
+# Install dependencies
+pip install -r requirements.txt
 
-Expanded PDF Data Extraction:
+# Run the application
+python Main.py
+```
 
-* Significantly improved pattern recognition for extracting information from various MLS PDF formats.
+### Dependencies
+- `customtkinter` - Modern UI framework
+- `pdfplumber` - Primary PDF processing
+- `PyPDF2` - Fallback PDF processing
+- `pillow` - Image processing
+- `tkinter-tooltip` - Enhanced tooltips
 
-* Includes support for synonymous terms (e.g., "Ann Taxes" for "Property Taxes," "LP" for "List Price") to capture more data automatically.
+## 📖 Usage
 
-Enhanced Stability & Database Handling:
+1. **Launch the Application**
+   ```bash
+   python Main.py
+   ```
 
-* Resolved critical threading issues with SQLite, ensuring robust and reliable database operations when extracting and saving data in the background.
+2. **Load a PDF**
+   - Click "Browse" to select an MLS PDF file
+   - Click "Extract Data" to automatically parse the document
 
-* Fixed an issue where the file path was inadvertently cleared after selection.
+3. **Review & Adjust Data**
+   - Observe color-coded input fields
+   - Manually adjust values as needed
+   - Watch real-time financial projections update
 
-* Addressed a TclError related to dynamic ttk.Entry styling, making the UI more stable.
+4. **Save & Manage Properties**
+   - Click "Save Current Data" to store in database
+   - Use the property list to load saved properties
+   - Export data as JSON files
 
-User Interface Refinements: Continued focus on a clean, professional, and friendly user experience with improved styling and responsiveness.
+## 🏗️ Project Structure
 
-### Features
+```
+ipDealMachine/
+├── Main.py                 # Main application GUI and logic
+├── config.py               # Configuration settings and defaults
+├── patterns.py             # Regex patterns for PDF extraction
+├── requirements.txt        # Python dependencies
+├── setup.py               # Package setup script
+├── build.sh               # Build script for distribution
+├── README.md              # This file
+├── .gitignore            # Git ignore rules
+├── data/                  # Data directory (ignored by git)
+│   ├── mls_properties.db  # SQLite database (auto-created)
+│   ├── exports/           # JSON export files
+│   └── sample_pdfs/       # Sample PDF files
+├── utils/                 # Utility modules
+│   ├── __init__.py
+│   ├── pdf_processor.py   # PDF text extraction
+│   ├── data_validator.py  # Data validation logic
+│   └── database.py        # Database operations
+└── tests/                 # Unit tests
+    ├── __init__.py
+    └── test_extractor.py  # Test cases
+```
 
-PDF Data Extraction: Automatically parses MLS PDF documents to pull out key property details.
+## 🔧 Configuration
 
-Manual Data Input: Easily adjust or input data manually for properties not from a PDF, or to fine-tune extracted values.
+Customize default values in `config.py`:
+- Default financial assumptions
+- Color schemes and themes
+- Database settings
+- UI layout parameters
 
-Financial Projections: Calculates essential real estate investment metrics:
+## 🧪 Testing
 
-* Gross Potential Income (GPI)
+Run the test suite:
+```bash
+python -m pytest tests/
+```
 
-* Vacancy and Credit Loss (V&C)
+## 🤝 Contributing
 
-* Effective Gross Income (EGI)
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-* Net Operating Income (NOI)
+## 📝 License
 
-* Capitalization Rate (Cap Rate)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-* Debt Service (Mortgage Payment)
+## 🙏 Acknowledgments
 
-* Cash Flow Before Taxes (CFBT)
+- Built with [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter)
+- PDF processing powered by [pdfplumber](https://github.com/jsvine/pdfplumber)
+- Inspired by real estate investment analysis needs
 
-* Cash-on-Cash Return (CoC)
+## 📞 Support
 
-* Gross Rent Multiplier (GRM)
+If you encounter issues or have questions:
+- Open an [issue](https://github.com/yourusername/ipDealMachine/issues) on GitHub
+- Check the troubleshooting section in the wiki
+- Review the FAQ for common questions
 
-* Debt Service Coverage Ratio (DSCR)
+---
 
-Data Validation: Basic validation to ensure data integrity for calculations.
-
-Database Storage: Save and load property data and financial projections to/from an integrated SQLite database.
-
-PDF Content Preview: View a text preview of the loaded PDF directly within the application.
-
-Setup & Installation
-Clone the Repository:
-
-    git clone <repository_url>
-    cd mls-pdf-extractor
-
-Create a Virtual Environment (Recommended):
-
-    python3 -m venv .venv
-    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-Install Dependencies:
-
-    pip install --upgrade pip
-    pip install -r requirements.txt
-
-Note: If you encounter issues with PDF extraction, ensure pdfplumber or PyPDF2 are correctly installed. You might need sudo apt-get install python3-tk on some Linux systems for Tkinter.
-
-Usage
-Run the Application:
-
-    python main.py
-
-Select a PDF: Click "Browse" to choose an MLS PDF file.
-
-Extract Data: Click "Extract Data" to automatically parse the document. The extracted values will populate the input fields.
-
-Review & Adjust:
-
-Observe the color coding on the input fields to see the source of the data.
-
-Manually adjust any values as needed; the field color will change to blue, and financial projections will update in real-time.
-
-See the output fields dynamically change color based on their calculated performance.
-
-Save Data: Click "Save Current Data" to store the property details and financial projections in the local database.
-
-Load Saved Properties: Use the "Processed Properties" list on the right to load previously saved properties.
-
-Project Structure
-
-    mls-pdf-extractor/
-    ├── main.py                 # Main application GUI and logic
-    ├── config.py               # Configuration settings, default values, and color definitions
-    ├── patterns.py             # Regular expressions for PDF data extraction
-    ├── requirements.txt        # Python dependencies
-    ├── utils/
-    │   ├── __init__.py
-    │   ├── pdf_processor.py    # Handles PDF text extraction
-    │   ├── data_validator.py   # Validates input data
-    │   └── database.py         # Manages SQLite database interactions
-    └── data/                   # Directory for database and sample files
-        └── mls_properties.db   # SQLite database file (created automatically)
-        └── exports/            # Exported JSON files (if implemented)
-        └── sample_pdfs/        # Place sample PDFs here
-
-Contributing
-Feel free to open issues or submit pull requests if you have suggestions for improvements or encounter any bugs!
+**Happy Investing! 🏠💰**

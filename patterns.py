@@ -41,6 +41,26 @@ EXTRACTION_PATTERNS = { # Correct spelling here
         r'# of Units:\s*(\d+)',
         r'Unit Count:\s*(\d+)',
         r'(\d+)-plex',
+        r'\b(\d+)\s*(?:units|unit)\b',
+    ],
+    'monthly_rent_per_unit': [
+        r'(?:Monthly Rent Per Unit|Monthly rent per unit|monthly rent per unit|Monthly rent):\s*[\$£€]?([\d,\.]+)',
+        r'Rent Per Unit:\s*[\$£€]?([\d,\.]+)',
+        r'Per unit:\s*[\$£€]?([\d,\.]+)'
+    ],
+
+    # Vacancy Rate (often shown as a percentage in reports)
+    'vacancy_rate': [
+        r'(?:Vacancy Rate|Vacancy|Vacancy \(%\)|Vacancy \(%\):)\s*([\d\.]+)%?',
+        r'Vacancy:\s*([\d\.]+)%',
+        r'Vacancy Rate:\s*([\d\.]+)%'
+    ],
+
+    # Property Address / Location — not always present in a consistent format, but commonly labeled
+    'property_address': [
+        r'(?:Address|Property Address|Location):\s*([A-Za-z0-9\.,\s#\-]+)',
+        r'Address:\s*([A-Za-z0-9\.,\s#\-]+)',
+        r'Location:\s*([A-Za-z0-9\.,\s#\-]+)'
     ],
     # 'monthly_rent_per_unit': This is typically not in general MLS listings,
     # but rather in pro-forma or specific rental listings. Keep as-is.
@@ -173,6 +193,9 @@ def extract_data_with_patterns(text_content: str) -> dict:
                 value = match.group(1).strip()
                 value = re.sub(r'\s+', ' ', value)
                 value = value.replace('"', '').strip()
+                # Normalize numeric values by removing thousands separators
+                if re.search(r'[\d,]+', value):
+                    value = value.replace(',', '')
                 extracted_data[field_name] = value
                 logger.info(f"Extracted '{field_name}': '{value}' using pattern '{pattern}'")
                 break

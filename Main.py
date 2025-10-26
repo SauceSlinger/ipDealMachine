@@ -6,6 +6,14 @@ A desktop application for extracting real estate data from MLS PDF files
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
+
+# Try to use customtkinter for a modern look if available. Fall back gracefully.
+USE_CUSTOMTK = False
+try:
+    import customtkinter as ctk
+    USE_CUSTOMTK = True
+except Exception:
+    ctk = None
 import os
 import json
 from datetime import datetime
@@ -38,9 +46,27 @@ class MLSDataExtractor:
         self.pdf_processor = PDFProcessor()
         self.validator = DataValidator() # This isn't directly used in main for field validation, but good to keep if needed elsewhere
 
-        self.root = tk.Tk()
-        self.root.title(f"{APP_NAME} v{APP_VERSION}")
-        self.root.geometry(WINDOW_SIZE)
+        # Create root window using customtkinter if available for modern styling
+        if USE_CUSTOMTK:
+            ctk.set_appearance_mode("light")
+            # Create a custom color palette: off-white background, mint and gold accents
+            self.CTK_COLORS = {
+                'bg': '#F8F7F2',      # off-white
+                'mint': C21_MINT if 'C21_MINT' in globals() else '#9FE2BF',    # mint accent from config
+                'gold': C21_GOLD if 'C21_GOLD' in globals() else '#D4AF37',
+                'black': C21_BLACK if 'C21_BLACK' in globals() else '#000000',
+                'light_gray': C21_LIGHT_GRAY if 'C21_LIGHT_GRAY' in globals() else '#EEEEEE'
+            }
+            self.root = ctk.CTk()
+            self.root.title(f"{APP_NAME} v{APP_VERSION}")
+            try:
+                self.root.geometry(WINDOW_SIZE)
+            except Exception:
+                pass
+        else:
+            self.root = tk.Tk()
+            self.root.title(f"{APP_NAME} v{APP_VERSION}")
+            self.root.geometry(WINDOW_SIZE)
 
         # Initialize Database Manager - pass the full path to the DB file
         db_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', DATABASE_NAME)
@@ -130,21 +156,37 @@ class MLSDataExtractor:
                              troughcolor=C21_LIGHT_GRAY)
 
         # Treeview (for file list)
+        tree_bg = C21_WHITE
+        tree_sel = C21_GOLD
+        if USE_CUSTOMTK:
+            # make treeview blend with CTk background
+            tree_bg = self.CTK_COLORS['bg']
+            tree_sel = self.CTK_COLORS['gold']
+
         self.style.configure('Treeview',
-                             background=C21_WHITE,
+                             background=tree_bg,
                              foreground=C21_DARK_GRAY,
-                             fieldbackground=C21_WHITE,
+                             fieldbackground=tree_bg,
                              rowheight=25)
         self.style.map('Treeview',
-                       background=[('selected', C21_GOLD)],
+                       background=[('selected', tree_sel)],
                        foreground=[('selected', C21_BLACK)])
+        # Style the Treeview heading to better match CTk typography when available
+        heading_bg = C21_DARK_GRAY
+        heading_fg = C21_WHITE
+        heading_font = ('Arial', 10, 'bold')
+        if USE_CUSTOMTK:
+            heading_bg = self.CTK_COLORS['light_gray']
+            heading_fg = self.CTK_COLORS['black']
+            heading_font = ('Arial', 11, 'bold')
+
         self.style.configure('Treeview.Heading',
-                             font=('Arial', 10, 'bold'),
-                             background=C21_DARK_GRAY,
-                             foreground=C21_WHITE,
+                             font=heading_font,
+                             background=heading_bg,
+                             foreground=heading_fg,
                              relief='flat')
         self.style.map('Treeview.Heading',
-                       background=[('active', '#555555')])
+                       background=[('active', '#D0D0D0')])
 
         # --- REPLACE YOUR PREVIOUS DIAGNOSTIC LINES WITH THESE ---
         print("\n--- DEBUG: Checking for Red.TButton style ---") # Update this line
@@ -232,21 +274,41 @@ class MLSDataExtractor:
 
     def setup_ui(self):
         # Toolbar Frame - Remains at the top, packed directly into root
-        toolbar_frame = ttk.Frame(self.root, relief='raised', borderwidth=1, style='TFrame')
-        toolbar_frame.pack(side=tk.TOP, fill=tk.X, pady=(0, 5))
+        if USE_CUSTOMTK:
+            toolbar_frame = ctk.CTkFrame(self.root, corner_radius=18, fg_color=self.CTK_COLORS['bg'])
+            toolbar_frame.pack(side=tk.TOP, fill=tk.X, pady=(6, 8), padx=8)
 
-        settings_btn = ttk.Button(toolbar_frame, text="Settings (Defaults)", command=self._open_default_settings_window)
-        settings_btn.pack(side=tk.LEFT, padx=5, pady=5)
+            settings_btn = ctk.CTkButton(toolbar_frame, text="Settings (Defaults)", command=self._open_default_settings_window,
+                                         fg_color=self.CTK_COLORS['mint'], text_color=self.CTK_COLORS['black'], corner_radius=14)
+            settings_btn.pack(side=tk.LEFT, padx=6, pady=6)
 
-        export_btn = ttk.Button(toolbar_frame, text="Export Current", command=self._export_current_data)
-        export_btn.pack(side=tk.LEFT, padx=5, pady=5)
+            export_btn = ctk.CTkButton(toolbar_frame, text="Export Current", command=self._export_current_data,
+                                      fg_color=self.CTK_COLORS['gold'], text_color=self.CTK_COLORS['black'], corner_radius=14)
+            export_btn.pack(side=tk.LEFT, padx=6, pady=6)
 
-        about_btn = ttk.Button(toolbar_frame, text="About", command=self._show_about_dialog)
-        about_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+            about_btn = ctk.CTkButton(toolbar_frame, text="About", command=self._show_about_dialog,
+                                     fg_color=self.CTK_COLORS['light_gray'], text_color=self.CTK_COLORS['black'], corner_radius=14)
+            about_btn.pack(side=tk.RIGHT, padx=6, pady=6)
+        else:
+            toolbar_frame = ttk.Frame(self.root, relief='raised', borderwidth=1, style='TFrame')
+            toolbar_frame.pack(side=tk.TOP, fill=tk.X, pady=(0, 5))
+
+            settings_btn = ttk.Button(toolbar_frame, text="Settings (Defaults)", command=self._open_default_settings_window)
+            settings_btn.pack(side=tk.LEFT, padx=5, pady=5)
+
+            export_btn = ttk.Button(toolbar_frame, text="Export Current", command=self._export_current_data)
+            export_btn.pack(side=tk.LEFT, padx=5, pady=5)
+
+            about_btn = ttk.Button(toolbar_frame, text="About", command=self._show_about_dialog)
+            about_btn.pack(side=tk.RIGHT, padx=5, pady=5)
 
         # Main container for the title and the three-column content
-        main_container = ttk.Frame(self.root, padding="10", style='TFrame')  # Adjusted padding slightly
-        main_container.pack(expand=True, fill=tk.BOTH)  # main_container fills the remaining space
+        if USE_CUSTOMTK:
+            main_container = ctk.CTkFrame(self.root, corner_radius=20, fg_color=self.CTK_COLORS['bg'])
+            main_container.pack(expand=True, fill=tk.BOTH, padx=10, pady=6)
+        else:
+            main_container = ttk.Frame(self.root, padding="10", style='TFrame')  # Adjusted padding slightly
+            main_container.pack(expand=True, fill=tk.BOTH)  # main_container fills the remaining space
 
         # Configure main_container's grid for the title row (row 0) and the columns row (row 1)
         main_container.grid_rowconfigure(0, weight=0)  # Title row, fixed height
@@ -256,24 +318,35 @@ class MLSDataExtractor:
         main_container.grid_columnconfigure(2, weight=1)  # Right column
 
         # Title Label - now spans all three columns at the top of main_container
-        title_label = ttk.Label(main_container, text=f"{APP_NAME} v{APP_VERSION}",
-                                font=('Arial', 20, 'bold'), anchor='center',
-                                background=C21_GOLD, foreground=C21_BLACK,
-                                relief='flat', padding=15)
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 15), sticky=tk.E + tk.W)
+        if USE_CUSTOMTK:
+            title_label = ctk.CTkLabel(main_container, text=f"{APP_NAME} v{APP_VERSION}",
+                                       font=('Arial', 20, 'bold'), anchor='center',
+                                       text_color=self.CTK_COLORS['black'], fg_color=self.CTK_COLORS['gold'])
+            title_label.grid(row=0, column=0, columnspan=3, sticky=tk.E + tk.W, padx=6, pady=(0, 15))
+        else:
+            title_label = ttk.Label(main_container, text=f"{APP_NAME} v{APP_VERSION}",
+                                    font=('Arial', 20, 'bold'), anchor='center',
+                                    background=C21_GOLD, foreground=C21_BLACK,
+                                    relief='flat', padding=15)
+            title_label.grid(row=0, column=0, columnspan=3, pady=(0, 15), sticky=tk.E + tk.W)
 
         # --- Create the three main column frames ---
         # These will replace your original left_panel and right_panel
-        left_column_frame = ttk.Frame(main_container, padding="15", style='TFrame')
-        middle_column_frame = ttk.Frame(main_container, padding="15", style='TFrame')
-        right_column_frame = ttk.Frame(main_container, padding="15", style='TFrame')
+        if USE_CUSTOMTK:
+            left_column_frame = ctk.CTkFrame(main_container, corner_radius=14, fg_color=self.CTK_COLORS['bg'])
+            middle_column_frame = ctk.CTkFrame(main_container, corner_radius=14, fg_color=self.CTK_COLORS['bg'])
+            right_column_frame = ctk.CTkFrame(main_container, corner_radius=14, fg_color=self.CTK_COLORS['bg'])
+        else:
+            left_column_frame = ttk.Frame(main_container, padding="15", style='TFrame')
+            middle_column_frame = ttk.Frame(main_container, padding="15", style='TFrame')
+            right_column_frame = ttk.Frame(main_container, padding="15", style='TFrame')
 
         # Place the column frames in the main_container grid (in row 1)
         left_column_frame.grid(row=1, column=0, sticky=tk.NSEW, padx=(0, 5))  # Leftmost column
         middle_column_frame.grid(row=1, column=1, sticky=tk.NSEW, padx=5)  # Middle column
         right_column_frame.grid(row=1, column=2, sticky=tk.NSEW, padx=(5, 0))  # Rightmost column
 
-        # --- LEFT COLUMN CONTENT (PDF Extraction & Input Data) ---
+    # --- LEFT COLUMN CONTENT (PDF Extraction & Input Data) ---
         # All widgets previously parented to 'left_panel' are now parented to 'left_column_frame'
         # Their internal grid layout logic is retained within this new parent.
         left_column_frame.columnconfigure(1, weight=1)  # Ensures input fields expand
@@ -282,34 +355,90 @@ class MLSDataExtractor:
         current_row = 0  # Renamed for clarity within this column context
 
         # PDF File and Controls
-        ttk.Label(left_column_frame, text="PDF File:", font=('Arial', 10, 'bold'), foreground=C21_DARK_GRAY).grid(
+        if USE_CUSTOMTK:
+            # Safe factory wrappers to accept common ttk kwargs and map them to CTk equivalents
+            def ttk_label(parent, *args, **kwargs):
+                kw = kwargs.copy()
+                if 'foreground' in kw:
+                    kw['text_color'] = kw.pop('foreground')
+                if 'background' in kw:
+                    kw['fg_color'] = kw.pop('background')
+                # remove unsupported ttk-only kwargs
+                for k in ('padding', 'anchor'):
+                    kw.pop(k, None)
+                return ctk.CTkLabel(parent, *args, **kw)
+
+            def ttk_entry(parent, *args, **kwargs):
+                kw = kwargs.copy()
+                # CTkEntry supports textvariable and width; pass through other common kwargs
+                return ctk.CTkEntry(parent, *args, **kw)
+
+            def ttk_button(parent, *args, **kwargs):
+                kw = kwargs.copy()
+                # Map common ttk kw names to CTk equivalents
+                if 'foreground' in kw:
+                    kw['text_color'] = kw.pop('foreground')
+                if 'background' in kw:
+                    kw['fg_color'] = kw.pop('background')
+                style = kw.pop('style', None)
+                # Provide sensible defaults for a couple of known styles
+                if style == 'Accent.TButton':
+                    kw.setdefault('fg_color', self.CTK_COLORS['gold'])
+                    kw.setdefault('text_color', self.CTK_COLORS['black'])
+                if style == 'Red.TButton':
+                    kw.setdefault('fg_color', '#FF4500')
+                    kw.setdefault('text_color', '#FFFFFF')
+                # Remove unsupported ttk-only kwargs
+                for k in ('padding', 'relief'):
+                    kw.pop(k, None)
+                return ctk.CTkButton(parent, *args, **kw)
+        else:
+            ttk_label = ttk.Label
+            ttk_entry = ttk.Entry
+            ttk_button = ttk.Button
+
+        ttk_label(left_column_frame, text="PDF File:", font=('Arial', 10, 'bold'), foreground=C21_DARK_GRAY).grid(
             row=current_row, column=0, sticky=tk.W, pady=5)
         self.file_path_var = tk.StringVar()
-        self.file_entry = ttk.Entry(left_column_frame, textvariable=self.file_path_var,
+        self.file_entry = ttk_entry(left_column_frame, textvariable=self.file_path_var,
                                     width=50)  # width is a suggestion, grid will control
         self.file_entry.grid(row=current_row, column=1, sticky=(tk.W, tk.E), pady=5, padx=(5, 5))
 
-        browse_btn = ttk.Button(left_column_frame, text="Browse", command=self.browse_file)
+        browse_btn = ttk_button(left_column_frame, text="Browse", command=self.browse_file)
         browse_btn.grid(row=current_row, column=2, pady=5)
         current_row += 1
 
-        extract_btn = ttk.Button(left_column_frame, text="Extract Data",
-                                 command=self.extract_data_threaded, style='Accent.TButton')
+        extract_btn = ttk_button(left_column_frame, text="Extract Data",
+                                 command=self.extract_data_threaded)
         extract_btn.grid(row=current_row, column=0, columnspan=3, pady=15, sticky=tk.E + tk.W)
         current_row += 1
 
-        self.progress = ttk.Progressbar(left_column_frame, mode='indeterminate')
+        if USE_CUSTOMTK:
+            self.progress = ctk.CTkProgressBar(left_column_frame, corner_radius=12)
+            # CTkProgressBar doesn't implement 'start' in the same way; we retain a wrapper
+        else:
+            self.progress = ttk.Progressbar(left_column_frame, mode='indeterminate')
         self.progress.grid(row=current_row, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
         current_row += 1
 
         self.status_var = tk.StringVar(value="Ready")
-        status_label = ttk.Label(left_column_frame, textvariable=self.status_var, font=('Arial', 9, 'italic'),
-                                 foreground=C21_DARK_GRAY)
+        if USE_CUSTOMTK:
+            status_label = ctk.CTkLabel(left_column_frame, textvariable=self.status_var, font=('Arial', 9, 'italic'),
+                                       text_color=C21_DARK_GRAY, fg_color=self.CTK_COLORS['bg'])
+        else:
+            status_label = ttk.Label(left_column_frame, textvariable=self.status_var, font=('Arial', 9, 'italic'),
+                                     foreground=C21_DARK_GRAY)
         status_label.grid(row=current_row, column=0, columnspan=3, pady=5)
         current_row += 1
 
         # Input Data Fields
-        fields_frame = ttk.LabelFrame(left_column_frame, text="Input Data", padding="15")
+        if USE_CUSTOMTK:
+            fields_frame = ctk.CTkFrame(left_column_frame, corner_radius=8, fg_color=self.CTK_COLORS['bg'])
+            # Add a simple label for the frame title
+            lbl = ctk.CTkLabel(fields_frame, text="Input Data", font=('Arial', 11, 'bold'), text_color=C21_DARK_GRAY)
+            lbl.grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(4, 8), padx=6)
+        else:
+            fields_frame = ttk.LabelFrame(left_column_frame, text="Input Data", padding="15")
         fields_frame.grid(row=current_row, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 5))
         fields_frame.columnconfigure(1, weight=1)  # Allows entry fields to expand within fields_frame
 
@@ -321,7 +450,10 @@ class MLSDataExtractor:
             ttk.Label(fields_frame, text=label + ":", foreground=C21_DARK_GRAY).grid(row=i, column=0, sticky=tk.W,
                                                                                      pady=3)
             var = tk.StringVar()
-            entry = ttk.Entry(fields_frame, textvariable=var, width=40)
+            if USE_CUSTOMTK:
+                entry = ctk.CTkEntry(fields_frame, textvariable=var, width=200, corner_radius=12)
+            else:
+                entry = ttk.Entry(fields_frame, textvariable=var, width=40)
             entry.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=3, padx=(10, 0))
 
             self.entry_vars[key] = var
@@ -335,46 +467,89 @@ class MLSDataExtractor:
         current_row += 1
 
         # Input Data Key
-        input_key_frame = ttk.Frame(left_column_frame, style='TFrame')
+        if USE_CUSTOMTK:
+            input_key_frame = ctk.CTkFrame(left_column_frame, corner_radius=12, fg_color=self.CTK_COLORS['bg'])
+        else:
+            input_key_frame = ttk.Frame(left_column_frame, style='TFrame')
         input_key_frame.grid(row=current_row, column=0, columnspan=3, sticky=tk.W, pady=(5, 15), padx=(15, 0))
-        ttk.Label(input_key_frame, text="Input Data Key:", font=('Arial', 9, 'bold'), foreground=C21_DARK_GRAY,
-                  background=C21_LIGHT_GRAY).pack(side=tk.LEFT, padx=(0, 10))
+        if USE_CUSTOMTK:
+            lbl = ctk.CTkLabel(input_key_frame, text="Input Data Key:", font=('Arial', 9, 'bold'), text_color=C21_DARK_GRAY)
+            lbl.pack(side=tk.LEFT, padx=(0, 10))
+            # Colored key labels
+            for txt, bgcol in [("Default", INPUT_COLOR_DEFAULT), ("Manual", INPUT_COLOR_MANUAL), ("Extracted", INPUT_COLOR_EXTRACTED)]:
+                k = ctk.CTkLabel(input_key_frame, text=txt, fg_color=bgcol, text_color=C21_BLACK, corner_radius=8)
+                k.pack(side=tk.LEFT, padx=5)
+        else:
+            ttk.Label(input_key_frame, text="Input Data Key:", font=('Arial', 9, 'bold'), foreground=C21_DARK_GRAY,
+                      background=C21_LIGHT_GRAY).pack(side=tk.LEFT, padx=(0, 10))
 
-        tk.Label(input_key_frame, text="Default", background=INPUT_COLOR_DEFAULT, foreground=C21_BLACK, relief='solid',
-                 borderwidth=1, padx=5, pady=2).pack(side=tk.LEFT, padx=5)
-        tk.Label(input_key_frame, text="Manual", background=INPUT_COLOR_MANUAL, foreground=C21_BLACK, relief='solid',
-                 borderwidth=1, padx=5, pady=2).pack(side=tk.LEFT, padx=5)
-        tk.Label(input_key_frame, text="Extracted", background=INPUT_COLOR_EXTRACTED, foreground=C21_BLACK,
-                 relief='solid', borderwidth=1, padx=5, pady=2).pack(side=tk.LEFT, padx=5)
+            tk.Label(input_key_frame, text="Default", background=INPUT_COLOR_DEFAULT, foreground=C21_BLACK, relief='solid',
+                     borderwidth=1, padx=5, pady=2).pack(side=tk.LEFT, padx=5)
+            tk.Label(input_key_frame, text="Manual", background=INPUT_COLOR_MANUAL, foreground=C21_BLACK, relief='solid',
+                     borderwidth=1, padx=5, pady=2).pack(side=tk.LEFT, padx=5)
+            tk.Label(input_key_frame, text="Extracted", background=INPUT_COLOR_EXTRACTED, foreground=C21_BLACK,
+                     relief='solid', borderwidth=1, padx=5, pady=2).pack(side=tk.LEFT, padx=5)
         current_row += 1
 
         # Action Buttons for Input Data
-        buttons_frame = ttk.Frame(left_column_frame, style='TFrame')
-        buttons_frame.grid(row=current_row, column=0, columnspan=3, pady=15)
+        if USE_CUSTOMTK:
+            buttons_frame = ctk.CTkFrame(left_column_frame, corner_radius=12, fg_color=self.CTK_COLORS['bg'])
+            buttons_frame.grid(row=current_row, column=0, columnspan=3, pady=15)
 
-        save_btn = ttk.Button(buttons_frame, text="Save Current Data", command=self.save_current_property)
-        save_btn.grid(row=0, column=0, padx=5)
+            save_btn = ctk.CTkButton(buttons_frame, text="Save Current Data", command=self.save_current_property,
+                                     fg_color=self.CTK_COLORS['mint'], text_color=self.CTK_COLORS['black'], corner_radius=12)
+            save_btn.grid(row=0, column=0, padx=6)
 
-        validate_btn = ttk.Button(buttons_frame, text="Validate Data", command=self.validate_data)
-        validate_btn.grid(row=0, column=1, padx=5)
+            validate_btn = ctk.CTkButton(buttons_frame, text="Validate Data", command=self.validate_data,
+                                        fg_color=self.CTK_COLORS['light_gray'], text_color=self.CTK_COLORS['black'], corner_radius=12)
+            validate_btn.grid(row=0, column=1, padx=6)
 
-        clear_btn = ttk.Button(buttons_frame, text="Clear All", command=self.clear_data)
-        clear_btn.grid(row=0, column=2, padx=5)
+            clear_btn = ctk.CTkButton(buttons_frame, text="Clear All", command=self.clear_data,
+                                     fg_color=self.CTK_COLORS['light_gray'], text_color=self.CTK_COLORS['black'], corner_radius=12)
+            clear_btn.grid(row=0, column=2, padx=6)
 
-        defaults_btn = ttk.Button(buttons_frame, text="Load Defaults", command=self.load_defaults)
-        defaults_btn.grid(row=0, column=3, padx=5)
+            defaults_btn = ctk.CTkButton(buttons_frame, text="Load Defaults", command=self.load_defaults,
+                                        fg_color=self.CTK_COLORS['light_gray'], text_color=self.CTK_COLORS['black'], corner_radius=12)
+            defaults_btn.grid(row=0, column=3, padx=6)
 
-        calculate_btn = ttk.Button(buttons_frame, text="Recalculate", command=self.calculate_projections,
-                                   style='Accent.TButton')
-        calculate_btn.grid(row=0, column=4, padx=5)
+            calculate_btn = ctk.CTkButton(buttons_frame, text="Recalculate", command=self.calculate_projections,
+                                         fg_color=self.CTK_COLORS['gold'], text_color=self.CTK_COLORS['black'], corner_radius=12)
+            calculate_btn.grid(row=0, column=4, padx=6)
+        else:
+            buttons_frame = ttk.Frame(left_column_frame, style='TFrame')
+            buttons_frame.grid(row=current_row, column=0, columnspan=3, pady=15)
+
+            save_btn = ttk.Button(buttons_frame, text="Save Current Data", command=self.save_current_property)
+            save_btn.grid(row=0, column=0, padx=5)
+
+            validate_btn = ttk.Button(buttons_frame, text="Validate Data", command=self.validate_data)
+            validate_btn.grid(row=0, column=1, padx=5)
+
+            clear_btn = ttk.Button(buttons_frame, text="Clear All", command=self.clear_data)
+            clear_btn.grid(row=0, column=2, padx=5)
+
+            defaults_btn = ttk.Button(buttons_frame, text="Load Defaults", command=self.load_defaults)
+            defaults_btn.grid(row=0, column=3, padx=5)
+
+            calculate_btn = ttk.Button(buttons_frame, text="Recalculate", command=self.calculate_projections,
+                                       style='Accent.TButton')
+            calculate_btn.grid(row=0, column=4, padx=5)
 
         # --- MIDDLE COLUMN CONTENT (Financial Projections & Output Value Key) ---
         # These were previously in 'right_panel', now reparented to 'middle_column_frame'
         # Using pack for simple vertical stacking within this column.
 
         # Financial Projections
-        output_frame = ttk.LabelFrame(middle_column_frame, text="Financial Projections", padding="15")
-        output_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))  # Use pack to fill column space
+        if USE_CUSTOMTK:
+            output_frame = ctk.CTkFrame(middle_column_frame, corner_radius=8, fg_color=self.CTK_COLORS['bg'])
+            # small header label to mimic LabelFrame title
+            ctk.CTkLabel(output_frame, text="Financial Projections", font=('Arial', 12, 'bold'), text_color=C21_DARK_GRAY).grid(row=0, column=0, sticky=tk.W, pady=(6, 6), padx=6)
+            output_frame.grid_columnconfigure(1, weight=1)
+            output_frame.pack = output_frame.grid
+            # Use grid semantics below
+        else:
+            output_frame = ttk.LabelFrame(middle_column_frame, text="Financial Projections", padding="15")
+            output_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))  # Use pack to fill column space
         output_frame.columnconfigure(1, weight=1)  # Make value labels expand within output_frame
 
         output_fields = [
@@ -399,18 +574,31 @@ class MLSDataExtractor:
             if key not in self.calculated_outputs:
                 self.calculated_outputs[key] = tk.StringVar(value="N/A")
 
-            output_label = tk.Label(output_frame, textvariable=self.calculated_outputs[key],
-                                    font=('Arial', 10, 'bold'), foreground=C21_BLACK,
-                                    background=C21_WHITE,
-                                    relief='solid', borderwidth=1, padx=5, pady=2)
-            output_label.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=3, padx=(10, 0))
+            if USE_CUSTOMTK:
+                output_label = ctk.CTkLabel(output_frame, textvariable=self.calculated_outputs[key],
+                                            font=('Arial', 10, 'bold'), text_color=C21_BLACK,
+                                            fg_color=C21_WHITE)
+                output_label.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=6, padx=(10, 0))
+            else:
+                output_label = tk.Label(output_frame, textvariable=self.calculated_outputs[key],
+                                        font=('Arial', 10, 'bold'), foreground=C21_BLACK,
+                                        background=C21_WHITE,
+                                        relief='solid', borderwidth=1, padx=5, pady=2)
+                output_label.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=3, padx=(10, 0))
+
             self.output_labels[key] = output_label
 
         # Output Value Key
-        output_key_frame = ttk.Frame(middle_column_frame, style='TFrame')
-        output_key_frame.pack(fill=tk.X, pady=(5, 15))  # Packs below output_frame
-        ttk.Label(output_key_frame, text="Output Value Key:", font=('Arial', 9, 'bold'), foreground=C21_DARK_GRAY,
-                  background=C21_LIGHT_GRAY).pack(side=tk.LEFT, padx=(0, 10))
+        if USE_CUSTOMTK:
+            output_key_frame = ctk.CTkFrame(middle_column_frame, corner_radius=8, fg_color=self.CTK_COLORS['bg'])
+            output_key_frame.pack = output_key_frame.grid
+            output_key_frame.grid(row=999, column=0, sticky='ew', pady=(5, 15))
+            ctk.CTkLabel(output_key_frame, text="Output Value Key:", font=('Arial', 9, 'bold'), text_color=C21_DARK_GRAY).pack(side=tk.LEFT, padx=(0, 10))
+        else:
+            output_key_frame = ttk.Frame(middle_column_frame, style='TFrame')
+            output_key_frame.pack(fill=tk.X, pady=(5, 15))  # Packs below output_frame
+            ttk.Label(output_key_frame, text="Output Value Key:", font=('Arial', 9, 'bold'), foreground=C21_DARK_GRAY,
+                      background=C21_LIGHT_GRAY).pack(side=tk.LEFT, padx=(0, 10))
 
         for i, color in enumerate(OUTPUT_GRADIENT_COLORS):
             text = ""
@@ -432,8 +620,12 @@ class MLSDataExtractor:
         right_column_frame.grid_columnconfigure(0, weight=1)  # Ensures content fills horizontally
 
         # Processed Properties List
-        list_frame = ttk.LabelFrame(right_column_frame, text="Processed Properties", padding="15")
-        list_frame.grid(row=0, column=0, sticky=tk.NSEW, pady=(0, 10))  # Top half of right column
+        if USE_CUSTOMTK:
+            list_frame = ctk.CTkFrame(right_column_frame, corner_radius=8, fg_color=self.CTK_COLORS['bg'])
+            list_frame.grid(row=0, column=0, sticky=tk.NSEW, pady=(0, 10))
+        else:
+            list_frame = ttk.LabelFrame(right_column_frame, text="Processed Properties", padding="15")
+            list_frame.grid(row=0, column=0, sticky=tk.NSEW, pady=(0, 10))  # Top half of right column
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(1, weight=1)  # Treeview itself will expand within list_frame
 
@@ -449,42 +641,32 @@ class MLSDataExtractor:
         )
         self.delete_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        # Treeview for property list
-        self.property_list_treeview = ttk.Treeview(list_frame,
-                                                   columns=("ID", "Address", "City", "State", "Zip", "Price",
-                                                            "FileName", "ExtractionDate"),
-                                                   show="headings")
+        # New: Button to show raw JSON blob for the selected property (for debugging)
+        self.show_blob_button = ttk.Button(
+            self.property_list_toolbar_frame,
+            text="Show JSON Blob",
+            command=self.show_selected_property_blob
+        )
+        self.show_blob_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.property_list_treeview.heading("ID", text="ID")
-        self.property_list_treeview.heading("Address", text="Address")
-        self.property_list_treeview.heading("City", text="City")
-        self.property_list_treeview.heading("State", text="State")
-        self.property_list_treeview.heading("Zip", text="Zip")
-        self.property_list_treeview.heading("Price", text="Price")
-        self.property_list_treeview.heading("FileName", text="File Name")
-        self.property_list_treeview.heading("ExtractionDate", text="Extracted On")
+        # New: Button to rebuild the Treeview in case it gets corrupted or needs refresh
+        self.rebuild_button = ttk.Button(
+            self.property_list_toolbar_frame,
+            text="Rebuild Table",
+            command=lambda: self.rebuild_property_list(list_frame)
+        )
+        self.rebuild_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.property_list_treeview.column("ID", width=40, stretch=tk.NO)
-        self.property_list_treeview.column("Address", stretch=tk.YES)
-        self.property_list_treeview.column("City", width=100, stretch=tk.NO)
-        self.property_list_treeview.column("State", width=50, stretch=tk.NO)
-        self.property_list_treeview.column("Zip", width=70, stretch=tk.NO)
-        self.property_list_treeview.column("Price", width=100, stretch=tk.NO, anchor='e')
-        self.property_list_treeview.column("FileName", width=0, stretch=tk.NO)
-        self.property_list_treeview.column("ExtractionDate", width=0, stretch=tk.NO)
-
-        self.property_list_treeview.grid(row=1, column=0, sticky=tk.NSEW)  # Treeview in row 1 of list_frame
-
-        tree_scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.property_list_treeview.yview)
-        self.property_list_treeview.configure(yscrollcommand=tree_scrollbar.set)
-        tree_scrollbar.grid(row=1, column=1, sticky=(tk.N, tk.S))
-
-        self.property_list_treeview.bind("<<TreeviewSelect>>", self.on_property_select)
-        self.property_list_treeview.bind("<Delete>", lambda event: self.delete_selected_property())
+        # Create the property list (CTk custom table) using a helper so it can be rebuilt later
+        self._create_property_list_table(list_frame)
 
         # PDF Content Preview
-        preview_frame = ttk.LabelFrame(right_column_frame, text="PDF Content Preview", padding="15")
-        preview_frame.grid(row=1, column=0, sticky=tk.NSEW, pady=(10, 0))  # Bottom half of right column
+        if USE_CUSTOMTK:
+            preview_frame = ctk.CTkFrame(right_column_frame, corner_radius=8, fg_color=self.CTK_COLORS['bg'])
+            preview_frame.grid(row=1, column=0, sticky=tk.NSEW, pady=(10, 0))
+        else:
+            preview_frame = ttk.LabelFrame(right_column_frame, text="PDF Content Preview", padding="15")
+            preview_frame.grid(row=1, column=0, sticky=tk.NSEW, pady=(10, 0))  # Bottom half of right column
         preview_frame.columnconfigure(0, weight=1)
         preview_frame.rowconfigure(0, weight=1)
 
@@ -494,6 +676,26 @@ class MLSDataExtractor:
                                                       foreground=C21_BLACK,
                                                       relief='solid', borderwidth=1)
         self.content_text.grid(row=0, column=0, sticky=tk.NSEW)
+        # An additional read-only area to display extracted key/value pairs (for fields that don't map to input fields)
+        self.extracted_text = scrolledtext.ScrolledText(preview_frame, height=8, width=70, wrap=tk.WORD,
+                                                        font=('Arial', 10),
+                                                        background=C21_WHITE,
+                                                        foreground=C21_BLACK,
+                                                        relief='solid', borderwidth=1)
+        self.extracted_text.grid(row=1, column=0, sticky=(tk.NSEW,))
+        self.extracted_text.insert(1.0, "Extracted details will appear here after extraction or when loading a property.")
+        self.extracted_text.config(state=tk.DISABLED)
+        # If using customtkinter, adapt the preview scrolled text to CTk compatible widget container
+        if USE_CUSTOMTK:
+            # We keep the ScrolledText for functionality but place it inside a CTkFrame for consistent look
+            preview_container = ctk.CTkFrame(preview_frame, corner_radius=8, fg_color=self.CTK_COLORS['bg'])
+            preview_container.grid(row=0, column=0, sticky=tk.NSEW)
+            # Reparent the existing ScrolledText by moving its grid within the container
+            self.content_text.grid_forget()
+            self.content_text.grid(row=0, column=0, sticky=tk.NSEW, in_=preview_container)
+            # Reparent extracted_text as well
+            self.extracted_text.grid_forget()
+            self.extracted_text.grid(row=1, column=0, sticky=tk.NSEW, in_=preview_container)
 
         # Main container's row 1 is already configured to expand, handling all columns
         # main_container.rowconfigure(1, weight=1) # This line is redundant given grid_rowconfigure(1, weight=1) above
@@ -537,12 +739,24 @@ class MLSDataExtractor:
         """Applies colors to input fields based on their source status using named styles."""
         for key, entry_widget in self.entries.items():
             source = self.input_source_status.get(key, 'default')
-            if source == 'default':
-                entry_widget.config(style='Default.TEntry')
-            elif source == 'manual':
-                entry_widget.config(style='Manual.TEntry')
-            elif source == 'extracted':
-                entry_widget.config(style='Extracted.TEntry')
+            # If using CTk entries, set fg_color directly. Otherwise fall back to ttk styles.
+            if USE_CUSTOMTK and hasattr(entry_widget, 'configure') and entry_widget.__class__.__module__.startswith('customtkinter'):
+                try:
+                    if source == 'default':
+                        entry_widget.configure(fg_color=INPUT_COLOR_DEFAULT)
+                    elif source == 'manual':
+                        entry_widget.configure(fg_color=INPUT_COLOR_MANUAL)
+                    elif source == 'extracted':
+                        entry_widget.configure(fg_color=INPUT_COLOR_EXTRACTED)
+                except Exception:
+                    pass
+            else:
+                if source == 'default':
+                    entry_widget.config(style='Default.TEntry')
+                elif source == 'manual':
+                    entry_widget.config(style='Manual.TEntry')
+                elif source == 'extracted':
+                    entry_widget.config(style='Extracted.TEntry')
 
     def _get_gradient_color(self, value, min_val, mid_val, max_val, direction='positive'):
         num_colors = len(OUTPUT_GRADIENT_COLORS)
@@ -566,6 +780,21 @@ class MLSDataExtractor:
 
         return OUTPUT_GRADIENT_COLORS[color_index]
 
+    def _set_widget_bg(self, widget, color):
+        """Set background/fg_color of a widget in a CTk-safe way."""
+        try:
+            if USE_CUSTOMTK and hasattr(widget, 'configure') and widget.__class__.__module__.startswith('customtkinter'):
+                # CTk widgets use fg_color for background-like property
+                widget.configure(fg_color=color)
+            else:
+                widget.config(background=color)
+        except Exception:
+            # Last resort: try configure
+            try:
+                widget.configure(background=color)
+            except Exception:
+                pass
+
     def _update_output_field_colors(self):
         # --- ADD THIS LINE FOR DEBUGGING ---
         print("--- DEBUG: _update_output_field_colors called ---")
@@ -578,7 +807,7 @@ class MLSDataExtractor:
             # --- END ADDITION ---
 
             if "N/A" in value_str:
-                label_widget.config(background=C21_LIGHT_GRAY)
+                self._set_widget_bg(label_widget, C21_LIGHT_GRAY)
                 # --- ADD THIS LINE FOR DEBUGGING ---
                 print(f"--- DEBUG: {key} is N/A. Set to C21_LIGHT_GRAY. Continuing.")
                 # --- END ADDITION ---
@@ -596,7 +825,7 @@ class MLSDataExtractor:
 
                 range_info = OUTPUT_RANGES.get(key)
                 if not range_info:
-                    label_widget.config(background=C21_LIGHT_GRAY)
+                    self._set_widget_bg(label_widget, C21_LIGHT_GRAY)
                     # --- ADD THIS LINE FOR DEBUGGING ---
                     print(f"--- DEBUG: No range_info found for {key}. Set to C21_LIGHT_GRAY. Continuing.")
                     # --- END ADDITION ---
@@ -612,49 +841,143 @@ class MLSDataExtractor:
                 # --- ADD THIS LINE FOR DEBUGGING ---
                 print(f"--- DEBUG: {key}. Color calculated by _get_gradient_color: {color}")
                 # --- END ADDITION ---
-                label_widget.config(background=color)
+                self._set_widget_bg(label_widget, color)
             except ValueError as ve:
                 # --- MODIFY THIS LINE FOR DEBUGGING ---
                 print(f"--- ERROR: ValueError for {key} ('{value_str}'). Details: {ve}. Set to C21_LIGHT_GRAY.")
                 # --- END MODIFICATION ---
-                label_widget.config(background=C21_LIGHT_GRAY)
+                self._set_widget_bg(label_widget, C21_LIGHT_GRAY)
             except Exception as e:
                 # --- MODIFY THIS LINE FOR DEBUGGING ---
                 print(f"--- ERROR: General Exception for {key}. Details: {e}. Set to C21_LIGHT_GRAY.")
                 # --- END MODIFICATION ---
-                label_widget.config(background=C21_LIGHT_GRAY)
+                self._set_widget_bg(label_widget, C21_LIGHT_GRAY)
+
+    def _on_property_row_click(self, property_id):
+        """Handles clicking on a property row in the CTk table."""
+        # Deselect previous row
+        if self.selected_property_row and self.selected_property_row in self.property_row_widgets:
+            prev_row = self.property_row_widgets[self.selected_property_row]
+            if USE_CUSTOMTK:
+                prev_row.configure(border_color=self.CTK_COLORS['light_gray'], border_width=2)
+            else:
+                prev_row.configure(relief='solid', borderwidth=1)
+        
+        # Select new row
+        self.selected_property_row = property_id
+        if property_id in self.property_row_widgets:
+            row = self.property_row_widgets[property_id]
+            if USE_CUSTOMTK:
+                row.configure(border_color=self.CTK_COLORS['gold'], border_width=3)
+            else:
+                row.configure(relief='raised', borderwidth=2)
+        
+        # Trigger the existing property select logic
+        self.current_property_id = property_id
+        self._load_selected_property()
+
+    def _load_selected_property(self):
+        """Loads the details of the currently selected property."""
+        if not self.current_property_id:
+            self.clear_data()
+            self.status_var.set("No property selected.")
+            return
+
+        details = self.db_manager.get_property_details(self.current_property_id)
+        if details:
+            # Clear input fields first
+            self.clear_input_fields()
+
+            # Populate original_extracted_data for validation reference
+            self.original_extracted_data = details['original_extracted_data']
+            logger.debug(f"DEBUG: self.original_extracted_data loaded from DB: {self.original_extracted_data}")
+            print(f"--- DEBUG PRINT: self.original_extracted_data loaded from DB: {self.original_extracted_data}")
+
+            # Populate GUI fields with user_input_data
+            for label, key in GUI_FIELD_ORDER:
+                user_value = details['user_input_data'].get(key)
+                original_value = self.original_extracted_data.get(key)
+
+                # Helper to normalize values for comparison
+                def clean_val_for_comparison(val):
+                    if val is None:
+                        return ""
+                    if isinstance(val, (int, float)):
+                        return str(val)
+                    val = str(val).replace('$', '').replace('%', '').replace(',', '').strip()
+                    val = re.sub(r'\s+', ' ', val)
+                    return val.lower()
+
+                # If user_value exists, prefer it
+                if user_value is not None and user_value != "":
+                    cleaned_user = clean_val_for_comparison(user_value)
+                    cleaned_original = clean_val_for_comparison(original_value)
+
+                    if cleaned_user == cleaned_original and cleaned_original != "":
+                        self._set_input_field_value(key, user_value, 'extracted')
+                    else:
+                        self._set_input_field_value(key, user_value, 'manual')
+                elif original_value is not None and original_value != "":
+                    # No user value saved, but we have original extracted data
+                    self._set_input_field_value(key, original_value, 'extracted')
+                else:
+                    # Fallback to defaults
+                    self._set_input_field_value(key, self.current_default_values.get(key, ''), 'default')
+
+            self.content_text.delete(1.0, tk.END)
+            self.content_text.insert(1.0, details['raw_text_preview'])
+
+            self.file_path_var.set(details['original_file_path'])
+
+            # Populate extracted_text from stored original_extracted_data
+            try:
+                self.extracted_text.config(state=tk.NORMAL)
+                self.extracted_text.delete(1.0, tk.END)
+                if self.original_extracted_data:
+                    for k, v in self.original_extracted_data.items():
+                        self.extracted_text.insert(tk.END, f"{k}: {v}\n")
+                else:
+                    self.extracted_text.insert(tk.END, "No original extracted data available for this property.")
+                self.extracted_text.config(state=tk.DISABLED)
+            except Exception:
+                pass
+
+            self.status_var.set(f"Loaded property: {os.path.basename(details['original_file_path'])}")
+            self.calculate_projections()
+        else:
+            messagebox.showerror("Error", "Could not load property details.")
+            self.status_var.set("Error loading property.")
+            self.clear_data()
 
     def populate_file_list(self):
-        for iid in self.property_list_treeview.get_children():
-            self.property_list_treeview.delete(iid)
-
-        properties = self.db_manager.get_all_properties_summary()
-        for prop in properties:
-            self.property_list_treeview.insert("", "end", iid=prop['id'],
-                                               values=(prop['file_name'], prop['extraction_date']))
+        print("DEBUG: populate_file_list called")
+        # Use the full loader to ensure values align with the table
+        try:
+            self.load_properties_to_table()
+            # Auto-select the first item if present
+            if self.property_row_widgets:
+                first_id = list(self.property_row_widgets.keys())[0]
+                self._on_property_row_click(first_id)
+        except Exception as e:
+            logger.error(f"Error populating file list: {e}")
 
     def delete_selected_property(self):
-        """Deletes the currently selected property from the database and Treeview."""
-        selected_item_id = self.property_list_treeview.selection()
-
-        if not selected_item_id:
+        """Deletes the currently selected property from the database and table."""
+        if not self.selected_property_row:
             messagebox.showwarning("No Selection", "Please select a property to delete.")
             return
 
-        # Treeview selection returns a tuple of item IDs, we only expect one for single selection
-        item_id = selected_item_id[0]
-        values = self.property_list_treeview.item(item_id, 'values')
+        property_db_id = self.selected_property_row
 
-        # Ensure values are not empty and ID is present (ID is now at index 0)
-        if not values or len(values) < 1:
-            messagebox.showerror("Error", "Could not retrieve property ID for deletion.")
-            return
-
-        property_db_id = values[0]  # The first column is now the database ID
-
-        # Get display info for confirmation message using the new column indices
-        display_address = values[1] if len(values) > 1 else "Unknown Address"  # Address is at index 1
-        display_city = values[2] if len(values) > 2 else "Unknown City"  # City is at index 2
+        # Get display info for confirmation
+        details = self.db_manager.get_property_details(property_db_id)
+        if details:
+            orig = details['original_extracted_data']
+            display_address = orig.get('property_address') or orig.get('community') or 'Unknown Address'
+            display_city = orig.get('city') or 'Unknown City'
+        else:
+            display_address = f"Property ID {property_db_id}"
+            display_city = ""
 
         confirm = messagebox.askyesno(
             "Confirm Deletion",
@@ -667,109 +990,208 @@ class MLSDataExtractor:
                 # Delete from database
                 db = DatabaseManager(DATABASE_NAME)
                 db.delete_property(property_db_id)
-                db.close()  # Ensure the database connection is closed
+                db.close()
 
-                # Remove from Treeview
-                self.property_list_treeview.delete(item_id)
+                # Remove from table
+                if property_db_id in self.property_row_widgets:
+                    self.property_row_widgets[property_db_id].destroy()
+                    del self.property_row_widgets[property_db_id]
+                
+                self.selected_property_row = None
                 self.status_var.set(f"Property ID {property_db_id} deleted.")
                 logger.info(f"Property ID {property_db_id} deleted successfully.")
 
                 # Clear input/output fields if the deleted property was the one currently loaded
                 if self.current_property_id == property_db_id:
-                    self.clear_data()  # This method already clears input/output and resets current_property_id
+                    self.clear_data()
                     self.status_var.set(f"Property ID {property_db_id} deleted and fields cleared.")
 
             except Exception as e:
                 messagebox.showerror("Deletion Error", f"Failed to delete property: {e}")
                 logger.error(f"Error deleting property ID {property_db_id}: {e}", exc_info=True)
 
-    def load_properties_to_treeview(self):
-        """Loads all properties from the database into the Treeview."""
-        # Clear existing items in the treeview
-        for item in self.property_list_treeview.get_children():
-            self.property_list_treeview.delete(item)
+    def load_properties_to_table(self):
+        """Loads all properties from the database into the CTk custom table."""
+        print("DEBUG: load_properties_to_table called")
+        # Clear existing row widgets
+        for row_widget in self.property_row_widgets.values():
+            try:
+                row_widget.destroy()
+            except Exception:
+                pass
+        self.property_row_widgets = {}
+        self.selected_property_row = None
 
-        db = DatabaseManager(DATABASE_NAME)
-        properties = db.get_all_properties()
-        db.close()
+        properties = self.db_manager.get_all_properties()
+        print(f"DEBUG: Found {len(properties)} properties")
 
         for prop in properties:
-            # Ensure the order of values inserted matches the treeview columns defined in setup_ui
-            # ("ID", "Address", "City", "State", "Zip", "Price", "FileName", "ExtractionDate")
-            self.property_list_treeview.insert(
-                "", tk.END,
-                values=(
-                    prop.get('id'),  # The database ID
-                    prop.get('property_address', 'N/A'),
-                    prop.get('city', 'N/A'),
-                    prop.get('state', 'N/A'),
-                    prop.get('zip_code', 'N/A'),
-                    f"${prop.get('listing_price', 0):,.2f}" if prop.get('listing_price') is not None else "N/A",
-                    prop.get('file_name', 'N/A'),  # Hidden column
-                    prop.get('extracted_at', 'N/A')  # Hidden column
-                )
-            )
+            orig = prop.get('original_extracted_data', {}) or {}
+            user = prop.get('user_input_data', {}) or {}
 
-    def on_property_select(self, event):
-        selected_items = self.property_list_treeview.selection()
-        if not selected_items:
-            self.clear_data()
-            self.status_var.set("No property selected.")
+            # Prefer property_address then community, else fallback to filename
+            address = orig.get('property_address') or user.get('property_address') or orig.get('community') or prop.get('file_name') or 'N/A'
+            mls = orig.get('mls_number') or user.get('mls_number') or ''
+            
+            city = orig.get('city') or user.get('city') or ''
+            
+            listing_price_raw = orig.get('purchase_price') or user.get('purchase_price') or ''
+            try:
+                listing_price_val = float(str(listing_price_raw).replace(',', '').replace('$', '')) if listing_price_raw != '' else None
+            except Exception:
+                listing_price_val = None
+            display_price = f"${listing_price_val:,.0f}" if listing_price_val is not None else "N/A"
+
+            print(f"DEBUG: Processing property ID {prop['id']}, address='{address}', mls='{mls}'")
+            # Create row frame
+            prop_id = prop.get('id')
+            if USE_CUSTOMTK:
+                row_frame = ctk.CTkFrame(
+                    self.property_list_scroll,
+                    fg_color=C21_WHITE,
+                    corner_radius=8,
+                    border_width=2,
+                    border_color=self.CTK_COLORS['light_gray']
+                )
+                row_frame.pack(fill=tk.X, padx=8, pady=4)
+                
+                # ID label
+                ctk.CTkLabel(row_frame, text=str(prop_id), width=50, font=('Arial', 10),
+                            text_color=C21_DARK_GRAY, anchor='w').pack(side=tk.LEFT, padx=(8, 4))
+                
+                # Address label
+                ctk.CTkLabel(row_frame, text=address[:60], width=350, font=('Arial', 10, 'bold'),
+                            text_color=C21_BLACK, anchor='w').pack(side=tk.LEFT, padx=4)
+                
+                # MLS label
+                ctk.CTkLabel(row_frame, text=mls if mls else '-', width=100, font=('Arial', 9),
+                            text_color=self.CTK_COLORS['gold'] if mls else C21_LIGHT_GRAY, anchor='w').pack(side=tk.LEFT, padx=4)
+                
+                # City label
+                ctk.CTkLabel(row_frame, text=city if city else '-', width=120, font=('Arial', 9),
+                            text_color=C21_DARK_GRAY, anchor='w').pack(side=tk.LEFT, padx=4)
+                
+                # Price label
+                ctk.CTkLabel(row_frame, text=display_price, width=120, font=('Arial', 10, 'bold'),
+                            text_color=self.CTK_COLORS['mint'], anchor='e').pack(side=tk.LEFT, padx=(4, 8))
+            else:
+                row_frame = ttk.Frame(self.property_list_scroll, relief='solid', borderwidth=1)
+                row_frame.pack(fill=tk.X, padx=5, pady=2)
+                
+                ttk.Label(row_frame, text=str(prop_id), width=5).pack(side=tk.LEFT, padx=5)
+                ttk.Label(row_frame, text=address[:50], width=40).pack(side=tk.LEFT, padx=5)
+                ttk.Label(row_frame, text=mls if mls else '-', width=12).pack(side=tk.LEFT, padx=5)
+                ttk.Label(row_frame, text=city if city else '-', width=15).pack(side=tk.LEFT, padx=5)
+                ttk.Label(row_frame, text=display_price, width=12).pack(side=tk.LEFT, padx=5)
+
+            # Store row with property ID
+            self.property_row_widgets[prop_id] = row_frame
+            print(f"DEBUG: Added row for ID {prop_id}")
+            
+            # Bind click to select
+            row_frame.bind("<Button-1>", lambda e, pid=prop_id: self._on_property_row_click(pid))
+            for child in row_frame.winfo_children():
+                child.bind("<Button-1>", lambda e, pid=prop_id: self._on_property_row_click(pid))
+
+        print(f"DEBUG: Total property_row_widgets: {len(self.property_row_widgets)}")
+
+    def _create_property_list_table(self, parent_frame):
+        """Creates a CTk-styled scrollable table for listing processed properties.
+        This replaces the ttk.Treeview with a fully CTk-compatible widget."""
+        # Destroy old widgets if they exist
+        try:
+            old_scroll = getattr(self, 'property_list_scroll', None)
+            if old_scroll:
+                old_scroll.destroy()
+        except Exception:
+            pass
+
+        # Create scrollable frame for rows (CTkScrollableFrame gives us a canvas + scrollbar)
+        if USE_CUSTOMTK:
+            self.property_list_scroll = ctk.CTkScrollableFrame(
+                parent_frame,
+                fg_color=self.CTK_COLORS['bg'],
+                corner_radius=8
+            )
+        else:
+            # Fallback: use a regular frame with canvas+scrollbar
+            container = ttk.Frame(parent_frame)
+            canvas = tk.Canvas(container, bg=C21_WHITE, highlightthickness=0)
+            scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+            self.property_list_scroll = ttk.Frame(canvas, style='TFrame')
+            
+            canvas.configure(yscrollcommand=scrollbar.set)
+            canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            canvas.create_window((0, 0), window=self.property_list_scroll, anchor="nw")
+            
+            def on_frame_configure(event):
+                canvas.configure(scrollregion=canvas.bbox("all"))
+            self.property_list_scroll.bind("<Configure>", on_frame_configure)
+            
+            container.grid(row=1, column=0, sticky=tk.NSEW)
+            self.property_list_scroll = container  # Override for consistency
+
+        self.property_list_scroll.grid(row=1, column=0, sticky=tk.NSEW)
+        
+        # Add header row
+        if USE_CUSTOMTK:
+            header_frame = ctk.CTkFrame(self.property_list_scroll, fg_color=self.CTK_COLORS['light_gray'], corner_radius=6, border_width=1, border_color=self.CTK_COLORS['gold'])
+            header_frame.pack(fill=tk.X, padx=8, pady=(8, 4))
+            
+            ctk.CTkLabel(header_frame, text="ID", width=50, font=('Arial', 10, 'bold'), text_color=C21_BLACK, anchor='w').pack(side=tk.LEFT, padx=(8, 4))
+            ctk.CTkLabel(header_frame, text="Address", width=350, font=('Arial', 10, 'bold'), text_color=C21_BLACK, anchor='w').pack(side=tk.LEFT, padx=4)
+            ctk.CTkLabel(header_frame, text="MLS", width=100, font=('Arial', 10, 'bold'), text_color=C21_BLACK, anchor='w').pack(side=tk.LEFT, padx=4)
+            ctk.CTkLabel(header_frame, text="City", width=120, font=('Arial', 10, 'bold'), text_color=C21_BLACK, anchor='w').pack(side=tk.LEFT, padx=4)
+            ctk.CTkLabel(header_frame, text="Price", width=120, font=('Arial', 10, 'bold'), text_color=C21_BLACK, anchor='e').pack(side=tk.LEFT, padx=(4, 8))
+        
+        # Store property rows: {property_id: row_frame_widget}
+        self.property_row_widgets = {}
+        self.selected_property_row = None
+
+    def rebuild_property_list(self, parent_frame):
+        """Destroys and recreates the property table. Does not touch the DB.
+        Useful if the widget state is corrupted or columns need to be refreshed."""
+        try:
+            # Destroy and recreate
+            if hasattr(self, 'property_list_scroll'):
+                try:
+                    self.property_list_scroll.destroy()
+                except Exception:
+                    pass
+            self._create_property_list_table(parent_frame)
+            # Repopulate
+            self.load_properties_to_table()
+            self.status_var.set("Rebuilt property list table.")
+        except Exception as e:
+            logger.error(f"Error rebuilding property list: {e}")
+            messagebox.showerror("Rebuild Error", f"Failed to rebuild property list: {e}")
+
+    def show_selected_property_blob(self):
+        """Shows the raw JSON blob (original_extracted_data) for the selected property in a popup for debugging."""
+        if not self.selected_property_row:
+            messagebox.showinfo("No Selection", "Please select a property to inspect its JSON blob.")
             return
 
-        selected_id = int(selected_items[0])
-        self.current_property_id = selected_id
+        try:
+            property_db_id = self.selected_property_row
+            details = self.db_manager.get_property_details(property_db_id)
+            if not details:
+                messagebox.showerror("Error", "Could not load property details from DB.")
+                return
 
-        details = self.db_manager.get_property_details(selected_id)
-        if details:
-            # Clear input fields first, which also resets their status to 'default'
-            self.clear_input_fields()
+            blob_text = json.dumps(details.get('original_extracted_data', {}), indent=2)
 
-            # Populate original_extracted_data for validation reference
-            # This 'original_extracted_data' here refers to the state saved in the DB
-            # which *should* be the snapshot of the GUI after initial extraction/user save.
-            self.original_extracted_data = details['original_extracted_data']
-            logger.debug(f"DEBUG: self.original_extracted_data loaded from DB: {self.original_extracted_data}")
-            print(
-                f"--- DEBUG PRINT: self.original_extracted_data loaded from DB: {self.original_extracted_data}")  # Added print
-
-            # Populate GUI fields with user_input_data using the new helper
-            for label, key in GUI_FIELD_ORDER:  # Iterate through GUI_FIELD_ORDER to ensure all fields are handled
-                user_value = details['user_input_data'].get(key)
-                original_value = self.original_extracted_data.get(key)
-
-                # Determine initial source type based on comparison
-                if user_value is not None and user_value != "":
-                    # Clean values for comparison before deciding source type
-                    def clean_val_for_comparison(val):
-                        if val is None: return ""
-                        if isinstance(val, (int, float)): return str(val)
-                        val = str(val).replace('$', '').replace('%', '').replace(',', '').strip()
-                        val = re.sub(r'\s+', ' ', val)
-                        return val.lower()
-
-                    cleaned_user = clean_val_for_comparison(user_value)
-                    cleaned_original = clean_val_for_comparison(original_value)
-
-                    if cleaned_user == cleaned_original:
-                        self._set_input_field_value(key, user_value, 'extracted')
-                    else:
-                        self._set_input_field_value(key, user_value, 'manual')
-                else:
-                    # If user_value is empty/None, set to default
-                    self._set_input_field_value(key, self.current_default_values.get(key, ''), 'default')
-
-            self.content_text.delete(1.0, tk.END)
-            self.content_text.insert(1.0, details['raw_text_preview'])
-
-            self.file_path_var.set(details['original_file_path'])
-
-            self.status_var.set(f"Loaded property: {os.path.basename(details['original_file_path'])}")
-            self.calculate_projections()
-        else:
-            messagebox.showerror("Error", "Could not load property details.")
-            self.status_var.set("Error loading property.")
-            self.clear_data()
+            popup = tk.Toplevel(self.root)
+            popup.title(f"JSON Blob for ID {property_db_id}")
+            popup.geometry("700x500")
+            txt = scrolledtext.ScrolledText(popup, wrap=tk.WORD, font=('Courier New', 10))
+            txt.pack(expand=True, fill=tk.BOTH)
+            txt.insert(1.0, blob_text)
+            txt.config(state=tk.DISABLED)
+        except Exception as e:
+            logger.error(f"Error showing JSON blob: {e}")
+            messagebox.showerror("Error", f"Failed to show JSON blob: {e}")
 
     def clear_input_fields(self):
         """Clears all input fields and resets their source status to 'default'."""
@@ -791,9 +1213,18 @@ class MLSDataExtractor:
             logger.debug("DEBUG: self.original_extracted_data cleared in browse_file.")
             print("--- DEBUG PRINT: self.original_extracted_data cleared in browse_file.")  # Added print
             for label_widget in self.output_labels.values():
-                label_widget.config(background=C21_LIGHT_GRAY)
+                # Use CTk-safe helper to set background so customtkinter widgets aren't called with .config
+                self._set_widget_bg(label_widget, C21_LIGHT_GRAY)
             for var in self.calculated_outputs.values():
                 var.set("N/A")
+            # Clear extracted_text area
+            try:
+                self.extracted_text.config(state=tk.NORMAL)
+                self.extracted_text.delete(1.0, tk.END)
+                self.extracted_text.insert(1.0, "No extraction performed yet for selected file.")
+                self.extracted_text.config(state=tk.DISABLED)
+            except Exception:
+                pass
 
     def extract_data_threaded(self):
         thread = threading.Thread(target=self.extract_data)
@@ -832,9 +1263,27 @@ class MLSDataExtractor:
             # --- CRITICAL CHANGE HERE ---
             # After populating GUI with extracted data AND defaults, capture the FULL current state
             # This ensures 'original_extracted_data' matches what's displayed in the GUI after extraction
-            self.original_extracted_data = {key: var.get() for key, var in self.entry_vars.items()}
+            # Capture the GUI state for core input fields
+            gui_snapshot = {key: var.get() for key, var in self.entry_vars.items()}
+            # Merge raw extracted_data to preserve non-GUI fields (e.g., property_address, mls_number)
+            merged_original = {}
+            merged_original.update(extracted_data or {})
+            merged_original.update(gui_snapshot)
+            self.original_extracted_data = merged_original
             logger.debug(f"DEBUG: self.original_extracted_data SET TO CURRENT GUI STATE after extraction: {self.original_extracted_data}")
             print(f"--- DEBUG PRINT: self.original_extracted_data SET TO CURRENT GUI STATE after extraction: {self.original_extracted_data}") # Added print
+            # Show the raw extracted key/value pairs in the extracted_text area so the user can see what was parsed
+            try:
+                self.extracted_text.config(state=tk.NORMAL)
+                self.extracted_text.delete(1.0, tk.END)
+                if extracted_data:
+                    for k, v in extracted_data.items():
+                        self.extracted_text.insert(tk.END, f"{k}: {v}\n")
+                else:
+                    self.extracted_text.insert(tk.END, "No extracted key/value pairs found.")
+                self.extracted_text.config(state=tk.DISABLED)
+            except Exception:
+                pass
             # --- END CRITICAL CHANGE ---
 
             self.root.after(0, lambda: self.status_var.set("Data extraction completed. Calculating financials..."))
@@ -1325,7 +1774,7 @@ class MLSDataExtractor:
         for var in self.calculated_outputs.values():
             var.set("N/A")
         for label_widget in self.output_labels.values():
-            label_widget.config(background=C21_LIGHT_GRAY)
+            self._set_widget_bg(label_widget, C21_LIGHT_GRAY)
         self.content_text.delete(1.0, tk.END)
         self.status_var.set("Ready")
         self.property_list_treeview.selection_remove(self.property_list_treeview.selection())
@@ -1485,13 +1934,6 @@ class MLSDataExtractor:
 
 
     def run(self):
-        if not self.pdf_processor.supported_library:
-            messagebox.showwarning(
-                "Missing Dependencies",
-                "PDF processing library not found.\n\nPlease install required packages:\n"
-                "pip install pdfplumber\n\nThe application will still run but PDF extraction will not work."
-            )
-
         logger.info(f"Starting {APP_NAME} v{APP_VERSION}")
         self.root.mainloop()
 

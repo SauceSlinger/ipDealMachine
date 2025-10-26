@@ -39,8 +39,14 @@ class DataValidator:
         """Validate integer fields"""
         if not value:
             return True, ""
+        # Reject decimal numbers like '4.5' for integer-only fields
         try:
-            # Allow floats to be entered and convert to int if possible for fields like "Loan Terms"
+            if '.' in str(value):
+                # If it has a decimal point, ensure it's equivalent to an int like '4.0'
+                f = float(value)
+                if not f.is_integer():
+                    return False, f"{field_name} must be a whole number"
+                # else fall through to int conversion
             int(float(value))
             return True, ""
         except ValueError:

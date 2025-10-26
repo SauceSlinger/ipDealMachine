@@ -153,6 +153,50 @@ class DatabaseManager:
             if conn:
                 conn.close()
 
+    def get_all_properties(self):
+        """
+        Fetches all properties with as much detail as stored in the DB.
+        Returns a list of dicts keyed by column names.
+        """
+        conn = None
+        try:
+            conn = self._get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute('SELECT id, file_name, original_file_path, extraction_date, raw_text_preview, original_extracted_data_json, user_input_data_json, calculated_financials_json FROM properties ORDER BY extraction_date DESC')
+            rows = cursor.fetchall()
+            results = []
+            for row in rows:
+                try:
+                    original_extracted = json.loads(row['original_extracted_data_json']) if row['original_extracted_data_json'] else {}
+                except Exception:
+                    original_extracted = {}
+                try:
+                    user_input = json.loads(row['user_input_data_json']) if row['user_input_data_json'] else {}
+                except Exception:
+                    user_input = {}
+                try:
+                    calculated = json.loads(row['calculated_financials_json']) if row['calculated_financials_json'] else {}
+                except Exception:
+                    calculated = {}
+
+                results.append({
+                    'id': row['id'],
+                    'file_name': row['file_name'],
+                    'original_file_path': row['original_file_path'],
+                    'extraction_date': row['extraction_date'],
+                    'raw_text_preview': row['raw_text_preview'],
+                    'original_extracted_data': original_extracted,
+                    'user_input_data': user_input,
+                    'calculated_financials': calculated
+                })
+            return results
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching all properties: {e}")
+            return []
+        finally:
+            if conn:
+                conn.close()
+
     def get_property_details(self, property_id):
         """
         Fetches full details for a specific property by ID, including both
